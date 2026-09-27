@@ -148,6 +148,29 @@ whenever you learn something new or change a pattern described here.
 - Before 2026-09-28, Buku Pantau showed guru every student in the school, and
   the calendar read static `INITIAL_MURID` instead of live `muridList`.
 
+## CSV import/templates — `src/lib/csvImport.ts`
+- Templates are built from `GURU_TEMPLATE_HEADERS` / `MURID_TEMPLATE_HEADERS`,
+  `;`-separated (Indonesian Excel list separator), UTF-8 BOM, downloaded via
+  Blob. Sample rows use real class names from `rombelList`.
+- `parseCsv` is quote-aware, strips BOM, handles CRLF, auto-detects `;` vs `,`.
+  The old `line.split(',')` parser broke on addresses with commas, on
+  Indonesian-Excel files, and on BOM (every row became "Murid Baru").
+- `validateMuridRows` / `validateGuruRows` reject rows (with line number +
+  reason) for: missing name/NISN/NIP, duplicate NISN/NIP (vs existing and
+  within file), class not in Manajemen Kelas, bad L/P, bad date. Dates accept
+  YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY. Headers match case-insensitively with
+  aliases for the old template (`Is Observer`, `Fase` ignored — fase comes
+  from the class). Guru `Rombel` may be empty ("Belum ditugaskan").
+- UI: `ImportReview` component (bottom of `UserManagementView.tsx`) shows
+  valid vs rejected rows; "Template Guru"/"Template Murid" buttons sit next to
+  "Import CSV".
+- Teachers are lifted: `UserManagementView` gets `teachers` +
+  `onUpdateTeachersList` from `App.tsx`, so teachers added/imported there show
+  up in Manajemen Kelas' wali kelas dropdown.
+- Known gap: `TeacherRecord.rombel` (set in the teacher form/import) and
+  `RombelRecord.waliKelasId` (set in Manajemen Kelas) are two separate sources
+  for "who is wali kelas" and are not synced.
+
 ## Supabase
 - `supabase-schema.sql` (repo root) is the single source of truth for the DB
   schema. `UserManagementView.tsx`'s "Salin Script SQL" button imports it via

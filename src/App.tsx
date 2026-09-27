@@ -381,6 +381,8 @@ export default function App() {
               {currentScreen === 'user_management' && (
                 <UserManagementView
                   onNavigate={handleNavigate}
+                  teachers={teachersList}
+                  onUpdateTeachersList={setTeachersList}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
                   userRole={userRole}

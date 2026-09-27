@@ -9,10 +9,22 @@ import {
   isSupabaseConfigured,
 } from '../lib/supabase';
 import supabaseSchemaSql from '../../supabase-schema.sql?raw';
+import {
+  GURU_TEMPLATE_HEADERS,
+  MURID_TEMPLATE_HEADERS,
+  buildCsv,
+  downloadCsv,
+  normalizeNip,
+  parseCsv,
+  validateGuruRows,
+  validateMuridRows,
+  type ImportError,
+} from '../lib/csvImport';
 
 interface UserManagementViewProps {
   onNavigate: (screen: ScreenId) => void;
   teachers?: TeacherRecord[];
+  onUpdateTeachersList?: React.Dispatch<React.SetStateAction<TeacherRecord[]>>;
   muridList?: MuridRecord[];
   onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
   userRole?: UserRole;
@@ -24,6 +36,7 @@ interface UserManagementViewProps {
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
   onNavigate,
   teachers: initialTeachersProp,
+  onUpdateTeachersList,
   muridList: initialMuridProp,
   onUpdateMuridList,
   userRole = 'kepala_sekolah',
@@ -61,44 +74,25 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [parsedGuru, setParsedGuru] = useState<any[]>([]);
   const [parsedMurid, setParsedMurid] = useState<any[]>([]);
 
-  // CSV Template download triggers
+  // CSV templates use real class names so a filled-in template imports cleanly.
   const downloadTeacherTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Nama,NIP,Rombel,Fase,Mata Pelajaran,Is Observer\nIbu Nurhasanah S.Pd.,198705232010012015,Kelas IV-A,fase-b,Bahasa Indonesia,FALSE\nBpk. Syahdan S.Pd.,198211052006041009,Kelas V-B,fase-c,Matematika,TRUE";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_import_guru_sipakainge.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Template CSV Guru berhasil diunduh!");
+    const kelas = rombelList.map((r) => r.name);
+    const content = buildCsv(GURU_TEMPLATE_HEADERS, [
+      ['Ibu Nurhasanah, S.Pd.', '198705232010012015', kelas[0] ?? '', 'Bahasa Indonesia', 'TIDAK'],
+      ['Bpk. Syahdan, S.Pd.', '198211052006041009', '', 'PJOK', 'YA'],
+    ]);
+    downloadCsv('template_import_guru_sipakainge.csv', content);
+    showToast('Template CSV Guru berhasil diunduh!');
   };
 
   const downloadMuridTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Nama,NISN,NIS,L/P,Rombel,Fase,Nama Orang Tua,No HP Orang Tua\nAhmad Fauzi,0149921021,240915,L,Kelas IV-A,fase-b,Bpk. Rahman & Ibu Salma,081244556677\nSiti Humaira,0159938192,240916,P,Kelas IV-A,fase-b,Ibu Hasnah,081399881122";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_import_murid_sipakainge.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Template CSV Murid berhasil diunduh!");
-  };
-
-  // CSV Generic Text Parser
-  const parseCSVFile = (text: string) => {
-    const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
-    if (lines.length <= 1) return [];
-    const headers = lines[0].split(",").map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ''));
-      const obj: any = {};
-      headers.forEach((header, index) => {
-        obj[header] = values[index] || '';
-      });
-      return obj;
-    });
+    const kelas = rombelList.map((r) => r.name);
+    const content = buildCsv(MURID_TEMPLATE_HEADERS, [
+      ['Ahmad Fauzi', '0149921021', '240915', 'L', kelas[0] ?? '', '2015-05-14', 'Jl. Perintis Kemerdekaan No. 10, Makassar', 'Bpk. Rahman & Ibu Salma', '081244556677'],
+      ['Siti Humaira', '0159938192', '240916', 'P', kelas[1] ?? kelas[0] ?? '', '22/08/2015', 'BTN Hamzy Blok C2, Makassar', 'Ibu Hasnah', '081399881122'],
+    ]);
+    downloadCsv('template_import_murid_sipakainge.csv', content);
+    showToast('Template CSV Murid berhasil diunduh!');
   };
 
   // Supabase Database Config State
@@ -111,9 +105,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [isCopiedSql, setIsCopiedSql] = useState(false);
 
   // Teachers State
-  const [teachersList, setTeachersList] = useState<TeacherRecord[]>(
+  const [localTeachersList, setLocalTeachersList] = useState<TeacherRecord[]>(
     initialTeachersProp || INITIAL_TEACHERS
   );
+  const teachersList = initialTeachersProp || localTeachersList;
+  const setTeachersList = (newVal: React.SetStateAction<TeacherRecord[]>) => {
+    if (onUpdateTeachersList) {
+      onUpdateTeachersList(newVal);
+    }
+    setLocalTeachersList(newVal);
+  };
   const [filterTeacherRole, setFilterTeacherRole] = useState<'all' | 'observer' | 'reguler'>('all');
   const [filterTeacherRombel, setFilterTeacherRombel] = useState<string>('all');
   const [searchTeacher, setSearchTeacher] = useState('');
@@ -131,6 +132,81 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   };
   const [filterMuridRombel, setFilterMuridRombel] = useState<string>('all');
   const [searchMurid, setSearchMurid] = useState('');
+
+  const guruCheck = validateGuruRows(
+    parsedGuru,
+    new Set(teachersList.map((t) => normalizeNip(t.nip))),
+    rombelList
+  );
+  const muridCheck = validateMuridRows(parsedMurid, new Set(muridList.map((m) => m.nisn)), rombelList);
+
+  const handleImportGuru = () => {
+    const stamp = Date.now();
+    const newTeachers: TeacherRecord[] = guruCheck.valid.map((g, index) => ({
+      id: `t-import-${stamp}-${index}`,
+      name: g.name,
+      nip: g.nip,
+      avatar: '',
+      initials: g.name
+        .replace(/^(Ibu|Bpk\.?|Bapak|Drs\.?|Dr\.?)\s+/i, '')
+        .split(/\s+/)
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase(),
+      rombel: g.rombel,
+      fase: g.fase,
+      faseLabel: g.rombel ? (g.fase === 'fase-a' ? 'Fase A' : g.fase === 'fase-b' ? 'Fase B' : 'Fase C') : '',
+      subject: g.subject,
+      topic: '-',
+      targetSchedule: 'Belum dijadwalkan',
+      scheduleTime: '-',
+      focusSupervision: '-',
+      focusSupervisionDesc: '-',
+      stage: 'pra',
+      stageBadgeText: 'Belum Dijadwalkan',
+      stageBadgeType: 'neutral',
+      isObserver: g.isObserver,
+    }));
+    setTeachersList((prev) => [...prev, ...newTeachers]);
+    setParsedGuru([]);
+    setIsImportGuruOpen(false);
+    showToast(`✓ ${newTeachers.length} data guru berhasil diimpor.`);
+  };
+
+  const handleImportMurid = () => {
+    const stamp = Date.now();
+    const newStudents: MuridRecord[] = muridCheck.valid.map((m, index) => ({
+      id: `m-import-${stamp}-${index}`,
+      name: m.name,
+      nisn: m.nisn,
+      nis: m.nis,
+      gender: m.gender,
+      rombel: m.rombel,
+      fase: m.fase,
+      parentName: m.parentName,
+      parentPhone: m.parentPhone,
+      tanggalLahir: m.tanggalLahir || undefined,
+      alamat: m.alamat || undefined,
+      wakeUpTime: '05:00',
+      bedTime: '21:00',
+      habits: {},
+      prayers: {
+        subuh: false,
+        dzuhur: false,
+        ashar: false,
+        maghrib: false,
+        isya: false,
+        tadarus: false,
+        dhuha: false,
+        doaHarian: false,
+      },
+    }));
+    setMuridList((prev: MuridRecord[]) => [...prev, ...newStudents]);
+    setParsedMurid([]);
+    setIsImportMuridOpen(false);
+    showToast(`✓ ${newStudents.length} data murid berhasil diimpor.`);
+  };
 
   // Modals state
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
@@ -693,6 +769,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                   </div>
 
                   <button
+                    type="button"
+                    onClick={downloadTeacherTemplate}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shrink-0 shadow-xs"
+                    title="Unduh template CSV untuk import data guru"
+                  >
+                    <span className="material-symbols-outlined text-sm font-bold">download</span>
+                    <span>Template Guru</span>
+                  </button>
+
+                  <button
                     onClick={() => setIsImportGuruOpen(!isImportGuruOpen)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-teal-800 px-4 py-2 text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 transition shrink-0 shadow-xs"
                   >
@@ -783,9 +869,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                           const reader = new FileReader();
                           reader.onload = (evt) => {
                             const text = evt.target?.result as string;
-                            const parsed = parseCSVFile(text);
-                            setParsedGuru(parsed);
-                            showToast(`Berhasil memuat ${parsed.length} data guru dari CSV! Silakan tinjau dan impor.`);
+                            setParsedGuru(parseCsv(text));
+                            e.target.value = '';
                           };
                           reader.readAsText(file);
                         }
@@ -794,71 +879,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     />
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
-                    <h5 className="text-[11px] font-extrabold text-slate-800 uppercase">Tinjauan Data ({parsedGuru.length} guru)</h5>
-                    <div className="max-h-28 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-100 text-[11px] text-slate-600 bg-slate-50/50 p-2">
-                      {parsedGuru.length === 0 ? (
-                        <p className="text-slate-400 italic text-center py-6">Belum ada file diunggah.</p>
-                      ) : (
-                        parsedGuru.map((g, idx) => (
-                          <div key={idx} className="py-1 flex justify-between gap-2">
-                            <span className="font-bold text-slate-900">{g.Nama || g.nama || '—'}</span>
-                            <span className="text-[10px] text-slate-400">NIP: {g.NIP || g.nip || '—'}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {parsedGuru.length > 0 && (
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          onClick={() => setParsedGuru([])}
-                          className="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-lg hover:bg-slate-100"
-                        >
-                          Batal
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newTeachers: TeacherRecord[] = parsedGuru.map((g, index) => {
-                              const name = g.Nama || g.nama || "Guru Baru";
-                              const isObsValue = (g["Is Observer"] || g["is observer"] || g["Is_Observer"] || "FALSE").toUpperCase() === "TRUE";
-                              const faseVal = g.Fase || g.fase || "fase-b";
-                              return {
-                                id: `t-import-${Date.now()}-${index}`,
-                                name,
-                                nip: g.NIP || g.nip || `198${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
-                                avatar: '',
-                                initials: name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase(),
-                                rombel: g.Rombel || g.rombel || 'Kelas IV-A',
-                                fase: faseVal as any,
-                                faseLabel: faseVal === 'fase-a' ? 'Fase A' : faseVal === 'fase-b' ? 'Fase B' : 'Fase C',
-                                subject: g["Mata Pelajaran"] || g["mata pelajaran"] || g.subject || 'Guru Kelas',
-                                topic: 'Tema Karakter & Supervisi Klinis',
-                                targetSchedule: 'Terjadwal',
-                                scheduleTime: '08:00 WITA',
-                                focusSupervision: 'Penguatan 7 KAIH & Diferensiasi',
-                                focusSupervisionDesc: 'Fokus pengamatan keterlibatan aktif murid.',
-                                stage: 'observasi',
-                                stageBadgeText: 'Observasi Terjadwal',
-                                stageBadgeType: 'tertiary',
-                                isObserver: isObsValue,
-                                assignedObserverName: 'Fahmawati, S.Pd. (Kepala Sekolah)',
-                                assignedAt: isObsValue ? '26 September 2026' : undefined,
-                              };
-                            });
-
-                            setTeachersList((prev) => [...prev, ...newTeachers]);
-                            setParsedGuru([]);
-                            setIsImportGuruOpen(false);
-                            showToast(`✓ Berhasil mengimpor ${newTeachers.length} data guru ke sistem!`);
-                          }}
-                          className="px-3.5 py-1.5 bg-teal-800 text-white rounded-xl text-[11px] font-bold hover:bg-teal-900 shadow-sm"
-                        >
-                          Impor Semua Data Guru
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <ImportReview
+                    entity="guru"
+                    totalRows={parsedGuru.length}
+                    validNames={guruCheck.valid.map((g) => `${g.name} — NIP ${g.nip}`)}
+                    errors={guruCheck.errors}
+                    onCancel={() => setParsedGuru([])}
+                    onImport={handleImportGuru}
+                  />
                 </div>
               </div>
             )}
@@ -954,7 +982,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
                         <td className="py-3.5 px-4">
                           <span className="font-semibold text-slate-800 inline-block px-2 py-0.5 rounded bg-slate-100 text-xs">
-                            {teacher.rombel}
+                            {teacher.rombel || 'Belum ditugaskan'}
                           </span>
                           <span className="block text-[10px] text-slate-400">{teacher.faseLabel}</span>
                         </td>
@@ -1098,6 +1126,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
                 <button
                   type="button"
+                  onClick={downloadMuridTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shrink-0 shadow-xs"
+                  title="Unduh template CSV untuk import data murid"
+                >
+                  <span className="material-symbols-outlined text-sm font-bold">download</span>
+                  <span>Template Murid</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsImportMuridOpen(!isImportMuridOpen)}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-teal-800 px-4 py-2 text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 transition shrink-0 shadow-xs"
                 >
@@ -1161,9 +1199,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                           const reader = new FileReader();
                           reader.onload = (evt) => {
                             const text = evt.target?.result as string;
-                            const parsed = parseCSVFile(text);
-                            setParsedMurid(parsed);
-                            showToast(`Berhasil memuat ${parsed.length} data murid dari CSV! Silakan tinjau dan impor.`);
+                            setParsedMurid(parseCsv(text));
+                            e.target.value = '';
                           };
                           reader.readAsText(file);
                         }
@@ -1172,80 +1209,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     />
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
-                    <h5 className="text-[11px] font-extrabold text-slate-800 uppercase">Tinjauan Data ({parsedMurid.length} murid)</h5>
-                    <div className="max-h-28 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-100 text-[11px] text-slate-600 bg-slate-50/50 p-2">
-                      {parsedMurid.length === 0 ? (
-                        <p className="text-slate-400 italic text-center py-6">Belum ada file diunggah.</p>
-                      ) : (
-                        parsedMurid.map((m, idx) => (
-                          <div key={idx} className="py-1 flex justify-between gap-2">
-                            <span className="font-bold text-slate-900">{m.Nama || m.nama || '—'}</span>
-                            <span className="text-[10px] text-slate-400">NISN: {m.NISN || m.nisn || '—'}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {parsedMurid.length > 0 && (
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setParsedMurid([])}
-                          className="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-lg hover:bg-slate-100"
-                        >
-                          Batal
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newStudents: MuridRecord[] = parsedMurid.map((m, index) => {
-                              const name = m.Nama || m.nama || "Murid Baru";
-                              const nisn = m.NISN || m.nisn || `014${Math.floor(1000000 + Math.random() * 9000000)}`;
-                              const nis = m.NIS || m.nis || `${Math.floor(240000 + Math.random() * 9000)}`;
-                              const gender = (m["L/P"] || m.gender || "L").toUpperCase().startsWith("P") ? "P" : "L";
-                              const rombel = m.Rombel || m.rombel || "Kelas IV-A";
-                              const fase = m.Fase || m.fase || "fase-b";
-                              
-                              return {
-                                id: `m-import-${Date.now()}-${index}`,
-                                name,
-                                nisn,
-                                nis,
-                                gender,
-                                rombel,
-                                fase: fase as any,
-                                parentName: m["Nama Orang Tua"] || m.parentName || "Orang Tua Murid",
-                                parentPhone: m["No HP Orang Tua"] || m.parentPhone || "0812-xxxx-xxxx",
-                                wakeUpTime: '05:00',
-                                bedTime: '21:00',
-                                habits: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: false },
-                                prayers: {
-                                  subuh: true,
-                                  dzuhur: true,
-                                  ashar: true,
-                                  maghrib: true,
-                                  isya: false,
-                                  tadarus: true,
-                                  dhuha: true,
-                                  doaHarian: true,
-                                },
-                                notes: 'Siswa baru diimpor dari CSV resmi sekolah.',
-                              };
-                            });
-
-                            setMuridList((prev: MuridRecord[]) => [...prev, ...newStudents]);
-                            setParsedMurid([]);
-                            setIsImportMuridOpen(false);
-                            showToast(`✓ Berhasil mengimpor ${newStudents.length} data murid baru ke ${newStudents[0]?.rombel || 'rombel sekolah'}!`);
-                          }}
-                          className="px-3.5 py-1.5 bg-teal-800 text-white rounded-xl text-[11px] font-bold hover:bg-teal-900 shadow-sm"
-                        >
-                          Impor Semua Data Murid
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <ImportReview
+                    entity="murid"
+                    totalRows={parsedMurid.length}
+                    validNames={muridCheck.valid.map((m) => `${m.name} — ${m.rombel}`)}
+                    errors={muridCheck.errors}
+                    onCancel={() => setParsedMurid([])}
+                    onImport={handleImportMurid}
+                  />
                 </div>
               </div>
             )}
@@ -1703,6 +1674,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"
                   >
+                    <option value="">Belum ditugaskan (bukan wali kelas)</option>
                     {rombelOptions.map((r) => (
                       <option key={r} value={r}>
                         {r}
@@ -1926,3 +1898,72 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     </div>
   );
 };
+
+interface ImportReviewProps {
+  entity: 'guru' | 'murid';
+  totalRows: number;
+  validNames: string[];
+  errors: ImportError[];
+  onCancel: () => void;
+  onImport: () => void;
+}
+
+const ImportReview: React.FC<ImportReviewProps> = ({ entity, totalRows, validNames, errors, onCancel, onImport }) => (
+  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
+    <h5 className="text-[11px] font-extrabold text-slate-800 uppercase">
+      Tinjauan Data ({totalRows} baris)
+    </h5>
+
+    {totalRows === 0 ? (
+      <p className="text-[11px] text-slate-400 italic text-center py-6 border border-slate-100 rounded-xl bg-slate-50/50">
+        Belum ada file diunggah.
+      </p>
+    ) : (
+      <>
+        <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">{validNames.length} siap diimpor</span>
+          {errors.length > 0 && (
+            <span className="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5">{errors.length} ditolak</span>
+          )}
+        </div>
+
+        <div className="max-h-32 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-100 text-[11px] bg-slate-50/50 p-2">
+          {errors.map((err) => (
+            <div key={`e-${err.line}`} className="py-1 text-rose-700">
+              <strong>Baris {err.line}</strong> ({err.name}): {err.reason}
+            </div>
+          ))}
+          {validNames.map((label, idx) => (
+            <div key={`v-${idx}`} className="py-1 text-slate-700">
+              ✓ {label}
+            </div>
+          ))}
+        </div>
+
+        {errors.length > 0 && (
+          <p className="text-[10px] text-slate-500">
+            Baris yang ditolak tidak akan diimpor. Perbaiki di file lalu unggah ulang.
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-lg hover:bg-slate-100"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onImport}
+            disabled={validNames.length === 0}
+            className="px-3.5 py-1.5 bg-teal-800 text-white rounded-xl text-[11px] font-bold hover:bg-teal-900 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Impor {validNames.length} Data {entity === 'guru' ? 'Guru' : 'Murid'}
+          </button>
+        </div>
+      </>
+    )}
+  </div>
+);

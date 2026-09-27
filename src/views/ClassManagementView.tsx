@@ -131,6 +131,11 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
         .map((r) => r.waliKelasId as string)
     );
 
+  const assignedElsewhere = teachersAlreadyAssigned(editingId || undefined);
+  const availableTeacherCount = teacherList.filter(
+    (t) => !assignedElsewhere.has(t.id) || t.id === formWaliKelasId
+  ).length;
+
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800 font-['Plus_Jakarta_Sans',sans-serif]">
       {toastMessage && (
@@ -220,7 +225,9 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Wali Kelas:</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Wali Kelas <span className="font-normal text-slate-400">(opsional)</span>:
+                </label>
                 <select
                   value={formWaliKelasId}
                   onChange={(e) => setFormWaliKelasId(e.target.value)}
@@ -228,8 +235,7 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
                 >
                   <option value="">-- Belum Ditentukan --</option>
                   {teacherList.map((t) => {
-                    const assigned = teachersAlreadyAssigned(editingId || undefined);
-                    const isTakenElsewhere = assigned.has(t.id) && t.id !== formWaliKelasId;
+                    const isTakenElsewhere = assignedElsewhere.has(t.id) && t.id !== formWaliKelasId;
                     return (
                       <option key={t.id} value={t.id} disabled={isTakenElsewhere}>
                         {t.name}
@@ -238,6 +244,14 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
                     );
                   })}
                 </select>
+                {availableTeacherCount === 0 && (
+                  <p className="mt-1 text-[11px] text-amber-700">
+                    {teacherList.length === 0
+                      ? 'Belum ada data guru.'
+                      : 'Semua guru sudah menjadi wali kelas lain.'}{' '}
+                    Kelas tetap bisa disimpan tanpa wali kelas, lalu diatur nanti lewat tombol Edit.
+                  </p>
+                )}
               </div>
 
               <div className="md:col-span-3 flex items-center gap-2 pt-2">
