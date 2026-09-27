@@ -5,7 +5,6 @@ import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
 interface SupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onSelectTeacherForObservation: (teacherId: string) => void;
-  onOpenScheduleModal: () => void;
   searchQuery: string;
   sessionStates?: Record<string, any>;
   onUpdateSessionStates?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
@@ -14,7 +13,6 @@ interface SupervisionDashboardViewProps {
 export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> = ({
   onNavigate,
   onSelectTeacherForObservation,
-  onOpenScheduleModal,
   searchQuery,
   sessionStates,
   onUpdateSessionStates,
@@ -439,15 +437,6 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="material-symbols-outlined text-base text-[#00685f]">calendar_today</span>
             <span className="text-xs font-semibold text-slate-800">Kamis, 20 Maret 2026</span>
           </div>
-
-          <button
-            type="button"
-            onClick={onOpenScheduleModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00685f] hover:bg-[#008378] text-white text-xs font-bold transition-all shadow-sm transform hover:-translate-y-0.5"
-          >
-            <span className="material-symbols-outlined text-base">add_circle</span>
-            <span>+ Jadwalkan Supervisi Baru</span>
-          </button>
         </div>
       </div>
 
@@ -1169,13 +1158,6 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => triggerToast('Membuka Panduan Rubrik 2026')}
-          className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-[#00685f] text-xs font-semibold shadow-sm border border-slate-200 shrink-0"
-        >
-          Pelajari Panduan Rubrik 2026
-        </button>
       </div>
     </div>
   );

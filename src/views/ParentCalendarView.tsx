@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { ScreenId } from '../types';
-import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID } from '../data/mockData';
+import { ScreenId, MuridRecord, RombelRecord } from '../types';
+import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { getGuruClass, getVisibleMurid } from '../lib/access';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenQuickRecord: () => void;
   userRole?: string;
   parentMuridId?: string;
+  rombelList?: RombelRecord[];
+  muridList?: MuridRecord[];
 }
 
 export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
@@ -14,19 +17,18 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   onOpenQuickRecord,
   userRole = 'orang_tua',
   parentMuridId,
+  rombelList = INITIAL_ROMBEL,
+  muridList = INITIAL_MURID,
 }) => {
-  const [selectedClass, setSelectedClass] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
-  );
-  const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : parentMuridId || 'm-4a-1'
-  );
-
   const isKS = userRole === 'kepala_sekolah';
-  const classMuridList = INITIAL_MURID.filter(m => !selectedClass || m.rombel === selectedClass);
-  const activeMurid = selectedMuridId 
-    ? INITIAL_MURID.find(m => m.id === selectedMuridId)
-    : (isKS ? undefined : INITIAL_MURID[0]);
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const [selectedClass, setSelectedClass] = useState<string>(
+    userRole === 'guru' ? getGuruClass(rombelList) ?? '' : ''
+  );
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
+  const classMuridList = visibleMurid.filter((m) => !selectedClass || m.rombel === selectedClass);
+  const activeMurid =
+    visibleMurid.find((m) => m.id === selectedMuridId) ?? (isKS ? undefined : classMuridList[0]);
 
   const [selectedDay, setSelectedDay] = useState<number>(25);
   const [activeFilter, setActiveFilter] = useState<'all' | number>('all');
@@ -155,11 +157,11 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-75"
                 >
                   <option value="">-- Pilih Kelas --</option>
-                  <option value="Kelas I-B">Kelas I-B</option>
-                  <option value="Kelas III-A">Kelas III-A</option>
-                  <option value="Kelas IV-A">Kelas IV-A</option>
-                  <option value="Kelas V-B">Kelas V-B</option>
-                  <option value="Kelas VI-C">Kelas VI-C</option>
+                  {rombelList.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

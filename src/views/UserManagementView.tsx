@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, TeacherRecord, MuridRecord, UserRole } from '../types';
-import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
+import { ScreenId, TeacherRecord, MuridRecord, UserRole, RombelRecord } from '../types';
+import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
 import {
   getCurrentSupabaseConfig,
   saveSupabaseConfig,
@@ -8,6 +8,7 @@ import {
   testSupabaseConnection,
   isSupabaseConfigured,
 } from '../lib/supabase';
+import supabaseSchemaSql from '../../supabase-schema.sql?raw';
 
 interface UserManagementViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -17,6 +18,7 @@ interface UserManagementViewProps {
   userRole?: UserRole;
   principalPhotoUrl?: string;
   onUpdatePrincipalPhoto?: (url: string) => void;
+  rombelList?: RombelRecord[];
 }
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
@@ -27,6 +29,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   userRole = 'kepala_sekolah',
   principalPhotoUrl,
   onUpdatePrincipalPhoto,
+  rombelList = INITIAL_ROMBEL,
 }) => {
   const [activeTab, setActiveTab] = useState<'guru' | 'murid' | 'database' | 'profil'>('guru');
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -388,75 +391,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     showToast('Konfigurasi Supabase direset ke default.');
   };
 
-  const sqlSchemaScript = `-- SKEMA DATABASE SUPABASE (POSTGRESQL) - SIPAKAINGE
-CREATE TABLE IF NOT EXISTS public.teachers (
-    id TEXT PRIMARY KEY,
-    nip TEXT NOT NULL,
-    name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'Guru Kelas',
-    rombel TEXT,
-    subject TEXT,
-    avatar TEXT,
-    is_observer BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.murid (
-    id TEXT PRIMARY KEY,
-    nisn TEXT NOT NULL,
-    nis TEXT NOT NULL,
-    name TEXT NOT NULL,
-    rombel TEXT NOT NULL,
-    gender TEXT CHECK (gender IN ('L', 'P')),
-    parent_name TEXT,
-    parent_phone TEXT,
-    wake_up_time TEXT DEFAULT '05:00',
-    bed_time TEXT DEFAULT '21:00',
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.daily_habits (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    murid_id TEXT REFERENCES public.murid(id) ON DELETE CASCADE,
-    date TEXT NOT NULL,
-    wake_up_time TEXT,
-    bed_time TEXT,
-    habits JSONB DEFAULT '[]'::jsonb,
-    prayers JSONB DEFAULT '{}'::jsonb,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT unique_murid_date UNIQUE (murid_id, date)
-);
-
-CREATE TABLE IF NOT EXISTS public.supervision_cycles (
-    id TEXT PRIMARY KEY,
-    teacher_id TEXT REFERENCES public.teachers(id) ON DELETE CASCADE,
-    semester TEXT DEFAULT 'Ganjil 2026/2027',
-    t1 BOOLEAN DEFAULT false,
-    t2 BOOLEAN DEFAULT false,
-    t3 BOOLEAN DEFAULT false,
-    t4 BOOLEAN DEFAULT false,
-    t5 BOOLEAN DEFAULT false,
-    rubrics JSONB DEFAULT '{}'::jsonb,
-    catatan TEXT,
-    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.murid ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_habits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.supervision_cycles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Akses Baca Guru" ON public.teachers FOR SELECT USING (true);
-CREATE POLICY "Akses Baca Murid" ON public.murid FOR SELECT USING (true);
-CREATE POLICY "Akses Baca 7 KAIH" ON public.daily_habits FOR SELECT USING (true);
-CREATE POLICY "Akses Baca Supervisi" ON public.supervision_cycles FOR SELECT USING (true);
-
-CREATE POLICY "Akses Tulis Guru" ON public.teachers FOR ALL USING (true);
-CREATE POLICY "Akses Tulis Murid" ON public.murid FOR ALL USING (true);
-CREATE POLICY "Akses Tulis 7 KAIH" ON public.daily_habits FOR ALL USING (true);
-CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING (true);`;
+  const sqlSchemaScript = supabaseSchemaSql;
 
   const handleCopySqlScript = () => {
     navigator.clipboard.writeText(sqlSchemaScript);
@@ -497,7 +432,9 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
   const maleMuridCount = muridList.filter((m) => m.gender === 'L').length;
   const femaleMuridCount = muridList.filter((m) => m.gender === 'P').length;
 
-  const rombelOptions = ['Kelas I-B', 'Kelas III-A', 'Kelas IV-A', 'Kelas V-B', 'Kelas VI-C'];
+  const rombelOptions = rombelList.map((r) => r.name);
+  const faseOfRombel = (name: string) =>
+    rombelList.find((r) => r.name === name)?.fase ?? 'fase-b';
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800">
@@ -1679,7 +1616,7 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                 </div>
 
                 <div className="pt-3 text-[11px] text-slate-400 flex items-center justify-between">
-                  <span>Mencakup: Tabel teachers, murid, daily_habits, supervision_cycles & kebijakan RLS</span>
+                  <span>Mencakup: guru, kelas, murid, 7 KAIH, presensi, nilai, portofolio, prestasi, supervisi, view laporan & RLS</span>
                   <button
                     onClick={handleCopySqlScript}
                     className="text-emerald-700 hover:text-emerald-800 font-bold"
@@ -1761,12 +1698,7 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                     value={teacherForm.rombel}
                     onChange={(e) => {
                       const r = e.target.value;
-                      const f =
-                        r === 'Kelas I-B'
-                          ? 'fase-a'
-                          : r === 'Kelas III-A' || r === 'Kelas IV-A'
-                          ? 'fase-b'
-                          : 'fase-c';
+                      const f = faseOfRombel(r);
                       setTeacherForm({ ...teacherForm, rombel: r, fase: f });
                     }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"
@@ -1903,12 +1835,7 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                     value={muridForm.rombel}
                     onChange={(e) => {
                       const r = e.target.value;
-                      const f =
-                        r === 'Kelas I-B'
-                          ? 'fase-a'
-                          : r === 'Kelas III-A' || r === 'Kelas IV-A'
-                          ? 'fase-b'
-                          : 'fase-c';
+                      const f = faseOfRombel(r);
                       setMuridForm({ ...muridForm, rombel: r, fase: f });
                     }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"

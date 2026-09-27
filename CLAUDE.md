@@ -119,6 +119,61 @@ whenever you learn something new or change a pattern described here.
   page can show the latest session's breakdown/chart, not a trend over
   time, unless we add a historical array (bigger change, ask before doing).
 
+## Class list (rombel) — single source
+- `rombelList` state in `App.tsx` is the only class list. Every class dropdown
+  (`UserManagementView` teacher+murid forms, `ClassHabitsInputView`,
+  `ParentCalendarView`, `ParentPortfolioView`, `StudentProgressDashboardView`)
+  takes it as a `rombelList` prop (default `INITIAL_ROMBEL`). Never hardcode
+  `<option value="Kelas I-B">` lists again — new classes from Manajemen Kelas
+  wouldn't show up.
+- Fase for a class comes from the rombel record (`faseOfRombel` in
+  UserManagementView), not from string-matching the class name.
+- `ClassManagementView`: rename moves students (`onUpdateMuridList`, since
+  murid.rombel is the class *name*); delete is blocked while the class has
+  students; duplicate names rejected. Mirrors the DB rules
+  (`murid_rombel_fkey` ON UPDATE CASCADE / ON DELETE RESTRICT, unique name).
+- The demo guru account is always `t-1` (Ibu Siti Aminah). Her class is
+  `rombelList.find(r => r.waliKelasId === 't-1')?.name`, so reassigning her in
+  Manajemen Kelas changes what the guru sees. Sidebar labels in
+  `AppSidebar.tsx` still say "Kelas IV-A" statically.
+
+## Who can see which students — `src/lib/access.ts`
+- `getVisibleMurid(role, muridList, rombelList, parentMuridId)` is the ONE rule:
+  kepala_sekolah = all students; guru = only the class where
+  `waliKelasId === 't-1'` (`getGuruClass`); orang_tua = only `parentMuridId`.
+- Used by `ParentDashboardView` (Buku Pantau), `ParentCalendarView`,
+  `ParentPortfolioView`. `ClassHabitsInputView` (and the 4 Data Individu
+  screens) use `getGuruClass` and never fall back to a student outside the
+  guru's class. Any new student-picking screen must go through this helper.
+- Before 2026-09-28, Buku Pantau showed guru every student in the school, and
+  the calendar read static `INITIAL_MURID` instead of live `muridList`.
+
+## Supabase
+- `supabase-schema.sql` (repo root) is the single source of truth for the DB
+  schema. `UserManagementView.tsx`'s "Salin Script SQL" button imports it via
+  `import ... from '../../supabase-schema.sql?raw'` — never paste a copy of
+  the SQL into a component again.
+- The script is idempotent and upgrades DBs that ran the pre-2026-09-28 schema
+  (`ADD COLUMN IF NOT EXISTS`, `DROP POLICY IF EXISTS`, constraints added in a
+  `DO` block after seeding). Seeds use `ON CONFLICT DO NOTHING`. Tested with
+  PGlite against fresh DB, legacy DB, and legacy DB + the optional cleanup.
+- Tables: school_settings (1 row, principal photo), teachers, rombel (unique
+  wali_kelas_id), murid (unique nisn, FK rombel→rombel.name ON UPDATE CASCADE
+  ON DELETE RESTRICT), daily_habits (+ divalidasi columns), presensi,
+  nilai_akademik, portofolio, prestasi, supervision_sessions (unique
+  teacher_id+semester). Views: v_rekap_nilai_akademik, v_rekap_presensi,
+  v_laporan_supervisi (security_invoker). Storage bucket rpp_bucket.
+- Columns are snake_case; TS types are camelCase. Nothing maps between them
+  yet — `getTeachersData`/`getMuridData` cast `select('*')` straight to the TS
+  types, which would be wrong. Needs a mapper when the app is wired to the DB.
+- **The app does not read/write these tables yet.** Only `testSupabaseConnection`
+  (reads `teachers.id`) and `uploadRPPDocument` (storage) are called.
+  `recordDailyHabit`, `getTeachersData`, `getMuridData` exist but have no
+  callers. All screens still run on mock data from `mockData.ts`/`App.tsx`.
+- RLS policy `sipakainge_dev_akses_penuh` gives anon full read/write on every
+  table because the app has no Supabase Auth. Development only — murid holds
+  children's NISN, birth date, address, parent phone.
+
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai
   Akademik, Karya & Portofolio, Prestasi) reusing `ClassHabitsInputView`

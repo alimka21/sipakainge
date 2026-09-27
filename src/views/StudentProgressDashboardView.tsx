@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { ScreenId, DayHabitLog, PrayerTimesChecklist, MuridRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID } from '../data/mockData';
+import { ScreenId, DayHabitLog, PrayerTimesChecklist, MuridRecord, RombelRecord } from '../types';
+import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
 
 interface StudentProgressDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenQuickRecord?: () => void;
+  rombelList?: RombelRecord[];
 }
 
 export const StudentProgressDashboardView: React.FC<StudentProgressDashboardViewProps> = ({
   onNavigate,
   onOpenQuickRecord,
+  rombelList = INITIAL_ROMBEL,
 }) => {
   const [filterMode, setFilterMode] = useState<'harian' | 'bulanan'>('harian');
   const [selectedDay, setSelectedDay] = useState<number>(25);
@@ -20,7 +22,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
   const [selectedRombel, setSelectedRombel] = useState<string>('Kelas IV-A');
   const [selectedMuridId, setSelectedMuridId] = useState<string>('m-4a-1');
 
-  const rombelOptions = ['Semua Kelas', 'Kelas I-B', 'Kelas III-A', 'Kelas IV-A', 'Kelas V-B', 'Kelas VI-C'];
+  const rombelOptions = ['Semua Kelas', ...rombelList.map((r) => r.name)];
 
   const availableMuridList =
     selectedRombel === 'Semua Kelas'

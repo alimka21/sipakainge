@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord, PrayerTimesChecklist, UserRole } from '../types';
-import { INITIAL_MURID, HABIT_LIST } from '../data/mockData';
+import { ScreenId, MuridRecord, PrayerTimesChecklist, UserRole, RombelRecord } from '../types';
+import { INITIAL_MURID, HABIT_LIST, INITIAL_ROMBEL } from '../data/mockData';
+import { getGuruClass } from '../lib/access';
 
 type WorkspaceTab = 'habits' | 'academics' | 'portfolios' | 'awards' | 'attendance';
 
@@ -13,6 +14,7 @@ interface ClassHabitsInputViewProps {
   /** When set, the view opens directly on this workspace tab and hides the tab switcher,
    * so it behaves as a standalone page reached from its own sidebar menu. */
   lockedTab?: WorkspaceTab;
+  rombelList?: RombelRecord[];
 }
 
 const TAB_META: Record<WorkspaceTab, { breadcrumb: string; title: string }> = {
@@ -29,12 +31,13 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   userRole = 'guru',
   onUpdateMuridList,
   lockedTab,
+  rombelList = INITIAL_ROMBEL,
 }) => {
   // Current active teacher is Ibu Siti Aminah (Wali Kelas IV-A)
   const currentTeacher = {
     name: 'Ibu Siti Aminah, S.Pd.',
     nip: '19840212 200801 2 018',
-    assignedClass: 'Kelas IV-A',
+    assignedClass: getGuruClass(rombelList) ?? '',
     fase: 'Fase B',
   };
 
@@ -42,9 +45,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   const [selectedClass, setSelectedClass] = useState<string>(
     userRole === 'kepala_sekolah' ? '' : currentTeacher.assignedClass
   );
-  const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : 'm-4a-1'
-  );
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('25 September 2026 (Hari Ini)');
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [guruNote, setGuruNote] = useState<string>(
@@ -257,9 +258,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     showToast(`✓ Presensi ${activeMurid.name} berhasil dicatat: ${attendanceStatus}!`);
   };
 
-  // If role is guru, strictly filter to the assigned class set by Kepala Sekolah (Kelas IV-A)
-  const availableClasses = ['Semua Kelas', 'Kelas IV-A', 'Kelas V-B', 'Kelas III-A', 'Kelas I-B', 'Kelas VI-C'];
-
   const filteredByClass = muridData.filter((m) => {
     if (userRole === 'guru') {
       return m.rombel === currentTeacher.assignedClass;
@@ -276,9 +274,10 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
       m.nis.includes(searchFilter)
   );
 
-  const activeMurid = selectedMuridId
-    ? displayMuridList.find((m) => m.id === selectedMuridId)
-    : (userRole === 'kepala_sekolah' ? undefined : displayMuridList[0] || muridData[0]);
+  // Guru only ever sees students of their own class; never fall back to another class.
+  const activeMurid =
+    displayMuridList.find((m) => m.id === selectedMuridId) ??
+    (userRole === 'kepala_sekolah' ? undefined : displayMuridList[0]);
 
   const isHomeHabitsValidated = !!(activeMurid as any)?.homeHabitsValidated;
 
@@ -358,7 +357,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
             <span className="text-slate-400">Ruang Pendidik</span>
             <span className="text-slate-300">/</span>
             <span className="text-slate-400">
-              {userRole === 'kepala_sekolah' ? 'Supervisi Karakter KS' : 'Wali Kelas IV-A'}
+              {userRole === 'kepala_sekolah' ? 'Supervisi Karakter KS' : `Wali ${currentTeacher.assignedClass}`}
             </span>
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-teal-800">
@@ -471,11 +470,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
                 >
                   <option value="">-- Pilih Kelas --</option>
-                  <option value="Kelas I-B">Kelas I-B</option>
-                  <option value="Kelas III-A">Kelas III-A</option>
-                  <option value="Kelas IV-A">Kelas IV-A</option>
-                  <option value="Kelas V-B">Kelas V-B</option>
-                  <option value="Kelas VI-C">Kelas VI-C</option>
+                  {rombelList.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

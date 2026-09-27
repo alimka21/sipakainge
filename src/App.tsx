@@ -298,6 +298,7 @@ export default function App() {
             <StudentProgressDashboardView
               onNavigate={handleNavigate}
               onOpenQuickRecord={() => setIsQuickRecordOpen(true)}
+              rombelList={rombelList}
             />
           )}
           {currentScreen === 'teacher_dashboard' && (
@@ -370,9 +371,6 @@ export default function App() {
                     setSelectedTeacherId(id);
                     handleNavigate('observation_form');
                   }}
-                  onOpenScheduleModal={() => {
-                    showToast('Membuka dialog jadwal supervisi klinis...');
-                  }}
                   searchQuery={searchQuery}
                   sessionStates={sessionStates}
                   onUpdateSessionStates={setSessionStates}
@@ -388,6 +386,7 @@ export default function App() {
                   userRole={userRole}
                   principalPhotoUrl={principalPhoto}
                   onUpdatePrincipalPhoto={setPrincipalPhoto}
+                  rombelList={rombelList}
                 />
               )}
 
@@ -399,6 +398,7 @@ export default function App() {
                   onUpdateRombelList={setRombelList}
                   teacherList={teachersList}
                   muridList={muridList}
+                  onUpdateMuridList={setMuridList}
                 />
               )}
 
@@ -409,6 +409,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  rombelList={rombelList}
                   lockedTab="habits"
                 />
               )}
@@ -420,6 +421,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  rombelList={rombelList}
                   lockedTab="academics"
                 />
               )}
@@ -431,6 +433,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  rombelList={rombelList}
                   lockedTab="portfolios"
                 />
               )}
@@ -442,6 +445,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  rombelList={rombelList}
                   lockedTab="awards"
                 />
               )}
@@ -453,6 +457,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  rombelList={rombelList}
                   lockedTab="attendance"
                 />
               )}
@@ -503,6 +508,7 @@ export default function App() {
                   muridList={muridList}
                   principalPhotoUrl={principalPhoto}
                   parentMuridId={parentMuridId}
+                  rombelList={rombelList}
                 />
               )}
 
@@ -512,7 +518,9 @@ export default function App() {
                   onNavigate={handleNavigate}
                   onOpenQuickRecord={() => setIsQuickRecordOpen(true)}
                   userRole={userRole}
+                  muridList={muridList}
                   parentMuridId={parentMuridId}
+                  rombelList={rombelList}
                 />
               )}
 
@@ -526,6 +534,7 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   parentMuridId={parentMuridId}
+                  rombelList={rombelList}
                 />
               )}
             </main>

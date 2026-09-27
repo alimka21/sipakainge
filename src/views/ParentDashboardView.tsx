@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, INITIAL_MURID } from '../data/mockData';
+import { ScreenId, MuridRecord, RombelRecord } from '../types';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { getGuruClass, getVisibleMurid } from '../lib/access';
 
 interface ParentDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -9,6 +10,7 @@ interface ParentDashboardViewProps {
   muridList?: MuridRecord[];
   principalPhotoUrl?: string;
   parentMuridId?: string;
+  rombelList?: RombelRecord[];
 }
 
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
@@ -18,16 +20,16 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   muridList = INITIAL_MURID,
   principalPhotoUrl,
   parentMuridId,
+  rombelList = INITIAL_ROMBEL,
 }) => {
   const isOrangTua = userRole === 'orang_tua';
-  const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    isOrangTua ? parentMuridId || 'm-4a-1' : ''
-  );
-
   const isKS = userRole === 'kepala_sekolah';
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
 
-  // Find currently active student
-  const activeMurid = muridList.find((m) => m.id === selectedMuridId);
+  const activeMurid = isOrangTua
+    ? visibleMurid[0]
+    : visibleMurid.find((m) => m.id === selectedMuridId);
 
   const calculateDoneHabits = (m: MuridRecord) => {
     return Object.values(m.habits).filter(Boolean).length;
@@ -47,7 +49,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 Langkah 1: Pilih Peserta Didik / Siswa
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Silakan pilih nama siswa terlebih dahulu untuk menampilkan data Buku Pantau Karakter 7 KAIH secara terperinci.
+                {isKS
+                  ? 'Kepala Sekolah dapat memantau seluruh siswa dari semua kelas.'
+                  : `Hanya siswa ${getGuruClass(rombelList) ?? 'kelas perwalian Anda'} yang dapat dipantau.`}
               </p>
             </div>
           </div>
@@ -61,7 +65,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
               >
                 <option value="">-- Silakan Pilih Siswa --</option>
-                {muridList.map((m) => (
+                {visibleMurid.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.rombel} • NISN: {m.nisn})
                   </option>

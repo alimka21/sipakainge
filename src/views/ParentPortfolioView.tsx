@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord } from '../types';
-import { HABIT_LIST, INITIAL_MURID } from '../data/mockData';
+import { ScreenId, MuridRecord, RombelRecord } from '../types';
+import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { getGuruClass, getVisibleMurid } from '../lib/access';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -8,6 +9,7 @@ interface ParentPortfolioViewProps {
   userRole?: string;
   muridList?: MuridRecord[];
   parentMuridId?: string;
+  rombelList?: RombelRecord[];
 }
 
 export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
@@ -16,18 +18,13 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   userRole = 'orang_tua',
   muridList = INITIAL_MURID,
   parentMuridId,
+  rombelList = INITIAL_ROMBEL,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'radar' | 'habits' | 'academic' | 'artifacts' | 'awards'
   >('radar');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [selectedClass, setSelectedClass] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
-  );
-  const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : parentMuridId || 'm-4a-1'
-  );
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -35,12 +32,14 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   };
 
   const isKS = userRole === 'kepala_sekolah';
-
-  // Filter students based on selected class
-  const classMuridList = muridList.filter(m => !selectedClass || m.rombel === selectedClass);
-  const activeMurid = selectedMuridId 
-    ? muridList.find(m => m.id === selectedMuridId)
-    : (isKS ? undefined : classMuridList[0] || muridList[0]);
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const [selectedClass, setSelectedClass] = useState<string>(
+    userRole === 'guru' ? getGuruClass(rombelList) ?? '' : ''
+  );
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
+  const classMuridList = visibleMurid.filter((m) => !selectedClass || m.rombel === selectedClass);
+  const activeMurid =
+    visibleMurid.find((m) => m.id === selectedMuridId) ?? (isKS ? undefined : classMuridList[0]);
 
   // Academic grades (Dynamic Merger)
   const activeAcademics = (activeMurid && (activeMurid as any).academics) 
@@ -257,11 +256,11 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-75"
                 >
                   <option value="">-- Pilih Kelas --</option>
-                  <option value="Kelas I-B">Kelas I-B</option>
-                  <option value="Kelas III-A">Kelas III-A</option>
-                  <option value="Kelas IV-A">Kelas IV-A</option>
-                  <option value="Kelas V-B">Kelas V-B</option>
-                  <option value="Kelas VI-C">Kelas VI-C</option>
+                  {rombelList.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

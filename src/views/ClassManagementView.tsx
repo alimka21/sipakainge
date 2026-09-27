@@ -8,6 +8,7 @@ interface ClassManagementViewProps {
   onUpdateRombelList?: React.Dispatch<React.SetStateAction<RombelRecord[]>>;
   teacherList?: TeacherRecord[];
   muridList?: MuridRecord[];
+  onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
 }
 
 const FASE_OPTIONS: { value: RombelRecord['fase']; label: string }[] = [
@@ -22,6 +23,7 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
   onUpdateRombelList,
   teacherList: propTeacherList,
   muridList: propMuridList,
+  onUpdateMuridList,
 }) => {
   const [rombelData, setRombelData] = useState<RombelRecord[]>(propRombelList || INITIAL_ROMBEL);
   const teacherList = propTeacherList || INITIAL_TEACHERS;
@@ -67,32 +69,49 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim()) {
+    const name = formName.trim();
+    if (!name) {
       showToast('Nama kelas / rombel wajib diisi!');
+      return;
+    }
+    if (rombelData.some((r) => r.id !== editingId && r.name.toLowerCase() === name.toLowerCase())) {
+      showToast(`Kelas ${name} sudah ada. Gunakan nama lain.`);
       return;
     }
 
     if (editingId) {
+      const oldName = rombelData.find((r) => r.id === editingId)?.name;
       updateRombel((prev) =>
         prev.map((r) =>
-          r.id === editingId ? { ...r, name: formName, fase: formFase, waliKelasId: formWaliKelasId || null } : r
+          r.id === editingId ? { ...r, name, fase: formFase, waliKelasId: formWaliKelasId || null } : r
         )
       );
-      showToast(`✓ Kelas ${formName} berhasil diperbarui!`);
+      // Students reference their class by name, so a rename must move them too.
+      if (oldName && oldName !== name && onUpdateMuridList) {
+        onUpdateMuridList((prev) =>
+          prev.map((m) => (m.rombel === oldName ? { ...m, rombel: name, fase: formFase } : m))
+        );
+      }
+      showToast(`✓ Kelas ${name} berhasil diperbarui!`);
     } else {
       const newRombel: RombelRecord = {
         id: `r-${Date.now()}`,
-        name: formName,
+        name,
         fase: formFase,
         waliKelasId: formWaliKelasId || null,
       };
       updateRombel((prev) => [...prev, newRombel]);
-      showToast(`✓ Kelas ${formName} berhasil ditambahkan!`);
+      showToast(`✓ Kelas ${name} berhasil ditambahkan!`);
     }
     resetForm();
   };
 
   const handleDelete = (rombel: RombelRecord) => {
+    const jumlahMurid = countMuridByRombel(rombel.name);
+    if (jumlahMurid > 0) {
+      showToast(`Kelas ${rombel.name} masih memiliki ${jumlahMurid} murid. Pindahkan murid terlebih dahulu.`);
+      return;
+    }
     updateRombel((prev) => prev.filter((r) => r.id !== rombel.id));
     showToast(`Kelas ${rombel.name} telah dihapus.`);
     if (editingId === rombel.id) resetForm();
