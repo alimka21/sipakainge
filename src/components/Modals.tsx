@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { APP_ASSETS, HABIT_LIST, INITIAL_MURID } from '../data/mockData';
+import { MuridRecord, SupervisionSession, TeacherRecord } from '../types';
+import { HABIT_LIST } from '../data/mockData';
 
 interface BeritaAcaraModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  teacher?: TeacherRecord;
+  session?: SupervisionSession;
 }
 
 export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
+  teacher,
+  session,
 }) => {
   if (!isOpen) return null;
 
@@ -49,11 +54,11 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Guru yang Diobservasi:</span>
-              <span className="font-bold text-slate-900">Ibu Siti Aminah, S.Pd. (NIP. 19840212 200801 2 018)</span>
+              <span className="font-bold text-slate-900">{teacher ? `${teacher.name} (NIP. ${teacher.nip})` : '-'}</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Mata Pelajaran & Kelas:</span>
-              <span className="font-bold text-slate-900">IPAS — Kelas IV-A (Fase B)</span>
+              <span className="font-bold text-slate-900">{session?.mapel || teacher?.subject || '-'} — {session?.kelas || teacher?.rombel || '-'}</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Pengamat / Supervisor:</span>
@@ -92,7 +97,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
             <div>
               <p>Guru Yang Diobservasi</p>
               <div className="h-10 flex items-center font-serif italic text-teal-900 font-bold">
-                ( Siti Aminah, S.Pd. )
+                ( {teacher?.name ?? '................'} )
               </div>
             </div>
             <div className="text-right">
@@ -132,16 +137,17 @@ interface QuickRecordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (count: number) => void;
+  muridOptions: MuridRecord[];
 }
 
 export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  muridOptions,
 }) => {
-  const [selectedMuridId, setSelectedMuridId] = useState<string>('m-4a-1');
-  const muridIV_A = INITIAL_MURID.filter((m) => m.rombel === 'Kelas IV-A');
-  const currentMurid = INITIAL_MURID.find((m) => m.id === selectedMuridId) || muridIV_A[0];
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
+  const currentMurid = muridOptions.find((m) => m.id === selectedMuridId) ?? muridOptions[0];
 
   const [selectedHabits, setSelectedHabits] = useState<number[]>([1, 2, 4, 5, 6]);
   const [wakeTime, setWakeTime] = useState(currentMurid?.wakeUpTime || '05:00');
@@ -160,9 +166,29 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
 
   if (!isOpen) return null;
 
+  if (!currentMurid) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl ring-1 ring-slate-200 space-y-3">
+          <span className="material-symbols-outlined text-4xl text-slate-300">person_off</span>
+          <h3 className="text-sm font-bold text-slate-900">Belum ada data murid</h3>
+          <p className="text-xs text-slate-500">
+            Tambahkan atau impor data murid di Manajemen Pengguna terlebih dahulu.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleSelectMurid = (id: string) => {
     setSelectedMuridId(id);
-    const m = INITIAL_MURID.find((x) => x.id === id);
+    const m = muridOptions.find((x) => x.id === id);
     if (m) {
       setWakeTime(m.wakeUpTime);
       setBedTime(m.bedTime);
@@ -207,14 +233,14 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
           <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-teal-800 text-lg">person</span>
-              <span className="font-bold text-teal-950 text-xs">Pilih Murid (Kelas IV-A):</span>
+              <span className="font-bold text-teal-950 text-xs">Pilih Murid:</span>
             </div>
             <select
               value={selectedMuridId}
               onChange={(e) => handleSelectMurid(e.target.value)}
               className="rounded-xl border border-teal-300 bg-white px-3 py-1.5 text-xs font-bold text-teal-900 focus:outline-none focus:ring-1 focus:ring-teal-600"
             >
-              {muridIV_A.map((m) => (
+              {muridOptions.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name} (NISN: {m.nisn})
                 </option>

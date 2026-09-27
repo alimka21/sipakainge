@@ -10,6 +10,7 @@ interface AppSidebarProps {
   onSwitchRole: (role: UserRole) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  guruClass?: string;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -18,7 +19,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   userRole,
   isCollapsed,
   onToggleCollapse,
+  guruClass,
 }) => {
+  const guruClassLabel = guruClass || 'Belum Ditugaskan';
   return (
     <aside
       className={`fixed left-0 top-0 bottom-0 z-40 bg-white border-r border-slate-200 transition-all duration-300 flex flex-col justify-between ${
@@ -301,7 +304,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <div>
                 {!isCollapsed && (
                   <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Wali Kelas IV-A (Karakter Murid)
+                    Wali {guruClass || 'Kelas: Belum Ditugaskan'}
                   </p>
                 )}
 
@@ -314,14 +317,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         ? 'bg-[#00685f] text-white shadow-sm'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                    title="Isian 7 KAIH Kelas IV-A"
+                    title={`Isian 7 KAIH ${guruClassLabel}`}
                   >
                     <span className="material-symbols-outlined text-lg shrink-0">fact_check</span>
                     {!isCollapsed && (
                       <div className="flex items-center justify-between w-full">
                         <span>Isian 7 KAIH Kelas</span>
                         <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
-                          Kelas IV-A
+                          {guruClassLabel}
                         </span>
                       </div>
                     )}
@@ -363,7 +366,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         ? 'bg-[#00685f] text-white shadow-sm'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                    title="Portofolio & Capaian Murid Kelas IV-A"
+                    title={`Portofolio & Capaian Murid ${guruClassLabel}`}
                   >
                     <span className="material-symbols-outlined text-lg shrink-0">badge</span>
                     {!isCollapsed && <span>Portofolio & Profil Murid</span>}

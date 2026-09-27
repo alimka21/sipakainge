@@ -20,9 +20,9 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
     if (role === 'kepala_sekolah') {
       setIdentifier('197305111995012002 (Fahmawati, S.Pd.)');
     } else if (role === 'guru') {
-      setIdentifier('198402122008012018 (Siti Aminah, S.Pd.)');
+      setIdentifier('');
     } else {
-      setIdentifier('0148928371 (Ahmad Faris Al-Fatih)');
+      setIdentifier('');
     }
   };
 
@@ -182,7 +182,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  {selectedRole === 'orang_tua' ? 'NISN Ananda' : 'NIP / Email / Nama Pengguna'}
+                  {selectedRole === 'orang_tua' ? 'NISN Ananda' : selectedRole === 'guru' ? 'NIP Guru' : 'NIP / Email / Nama Pengguna'}
                 </label>
                 <div className="relative flex items-center">
                   <span className="material-symbols-outlined absolute left-3 text-slate-400 text-lg">badge</span>
@@ -191,6 +191,8 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder={selectedRole === 'orang_tua' ? 'Contoh: 0148928371' : selectedRole === 'guru' ? 'NIP guru, contoh: 198705232010012015' : undefined}
+                    inputMode={selectedRole === 'orang_tua' ? 'numeric' : undefined}
                     className="w-full bg-[#eff4ff]/70 border border-slate-200 pl-10 pr-3 py-2.5 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#00685f] focus:bg-white transition-all"
                   />
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord } from '../types';
+import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { uploadRPPDocument } from '../lib/supabase';
@@ -10,6 +10,8 @@ interface TeacherSelfSupervisionViewProps {
   onUpdateSessionStates: React.Dispatch<React.SetStateAction<Record<string, SupervisionSession>>>;
   muridList?: MuridRecord[];
   onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
+  teacherList?: TeacherRecord[];
+  guruId?: string;
 }
 
 export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProps> = ({
@@ -18,6 +20,8 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   onUpdateSessionStates,
   muridList: propMuridList,
   onUpdateMuridList,
+  teacherList = INITIAL_TEACHERS,
+  guruId,
 }) => {
   // Fallback to local state if parent did not provide muridList
   const [localMuridList, setLocalMuridList] = useState<MuridRecord[]>(INITIAL_MURID);
@@ -31,8 +35,8 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   };
 
   // Simulator Switcher - let testing users select which teacher they want to act as!
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('t-1');
-  const teacher = INITIAL_TEACHERS.find((t) => t.id === selectedTeacherId) || INITIAL_TEACHERS[0];
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(guruId || teacherList[0]?.id || '');
+  const teacher = teacherList.find((t) => t.id === selectedTeacherId) || teacherList[0];
 
   const [activeTab, setActiveTab] = useState<'stepper' | 'identitas' | 'modul' | 'refleksi' | 'hasil' | 'data_murid'>('stepper');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -66,6 +70,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     penguatanKS: '', catatanKhususKS: '', rekomendasiKS: '',
     tindakLanjutKS: 'TIDAK_ADA_TINDAK_LANJUT',
   };
+  const observedScores = Object.values(activeSession.scores22 || {}) as number[];
 
   // Local copy for draft inputs before submitting
   const [draftMapel, setDraftMapel] = useState(activeSession.mapel);
@@ -109,7 +114,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   }, [selectedTeacherId, activeSession.reflection3]);
 
   // Form states for Student Data Management
-  const [selectedRombel, setSelectedRombel] = useState<string>('Kelas IV-A');
+  const [selectedRombel, setSelectedRombel] = useState<string>('');
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
 
   // Academic form
@@ -130,7 +135,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
 
   // Sync default values when active teacher / simulation changes
   useEffect(() => {
-    setSelectedRombel(teacher.rombel || 'Kelas IV-A');
+    setSelectedRombel(teacher.rombel || '');
     const isMapel = teacher.subject && !teacher.subject.toLowerCase().includes('guru kelas') && !teacher.subject.toLowerCase().includes('tematik');
     setAcademicSubjectInput(isMapel ? teacher.subject : 'Matematika');
     setSelectedMuridId('');
@@ -419,11 +424,11 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
               value={selectedTeacherId}
               onChange={(e) => {
                 setSelectedTeacherId(e.target.value);
-                showToast(`Beralih ke sesi supervisi: ${INITIAL_TEACHERS.find(t => t.id === e.target.value)?.name}`);
+                showToast(`Beralih ke sesi supervisi: ${teacherList.find(t => t.id === e.target.value)?.name}`);
               }}
               className="rounded-xl border border-amber-300 bg-white px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none"
             >
-              {INITIAL_TEACHERS.map((t) => (
+              {teacherList.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.rombel})
                 </option>
@@ -1190,10 +1195,10 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                     <div className="p-5 rounded-2xl bg-slate-900 text-white text-center space-y-1 relative overflow-hidden">
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">IPK Observasi Kelas</p>
                       <p className="text-3xl font-extrabold text-teal-300 tabular-nums">
-                        {((Object.values(activeSession.scores22 || {}).reduce((a: number, b: number) => a + b, 0) || (selectedTeacherId === 't-1' ? 70 : selectedTeacherId === 't-3' ? 64 : selectedTeacherId === 't-4' ? 68 : selectedTeacherId === 't-5' ? 88 : 66)) / 22).toFixed(2)}
+                        {observedScores.length ? (observedScores.reduce((a, b) => a + b, 0) / observedScores.length).toFixed(2) : '—'}
                         <span className="text-sm font-semibold text-slate-400"> / 4.0</span>
                       </p>
-                      <p className="text-[10px] text-slate-400 mt-1 font-semibold text-amber-300">Kesimpulan: {activeSession.kesimpulanObs || 'Baik'}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-semibold text-amber-300">Kesimpulan: {activeSession.kesimpulanObs || 'Belum ada'}</p>
                     </div>
 
                     <div className="p-5 rounded-2xl bg-slate-900 text-white text-center space-y-1 relative overflow-hidden">
@@ -1270,7 +1275,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                         <span className="col-span-3 text-center">Skor Evaluasi</span>
                       </div>
                       {OBSERVASI_MENDALAM_ITEMS.map((item, idx) => {
-                        const score = activeSession.scores22?.[item.id] ?? (selectedTeacherId === 't-1' ? 3 : selectedTeacherId === 't-3' ? 3 : selectedTeacherId === 't-4' ? 3 : selectedTeacherId === 't-5' ? 4 : 3);
+                        const score = activeSession.scores22?.[item.id];
                         return (
                           <div key={item.id} className="grid grid-cols-12 gap-2 pt-2 items-center text-slate-700 font-medium">
                             <span className="col-span-1 text-center font-bold text-slate-400">{idx + 1}</span>
@@ -1280,9 +1285,10 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                                 score === 4 ? 'bg-indigo-100 text-indigo-800' :
                                 score === 3 ? 'bg-emerald-100 text-emerald-800' :
                                 score === 2 ? 'bg-amber-100 text-amber-800' :
+                                score === undefined ? 'bg-slate-100 text-slate-400' :
                                 'bg-red-100 text-red-800'
                               }`}>
-                                {score} / 4
+                                {score === undefined ? 'Belum dinilai' : `${score} / 4`}
                               </span>
                             </span>
                           </div>

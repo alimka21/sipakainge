@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord, RombelRecord } from '../types';
-import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
-import { getGuruClass, getVisibleMurid } from '../lib/access';
+import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
+import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -10,6 +10,8 @@ interface ParentPortfolioViewProps {
   muridList?: MuridRecord[];
   parentMuridId?: string;
   rombelList?: RombelRecord[];
+  guruId?: string;
+  teacherList?: TeacherRecord[];
 }
 
 export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
@@ -19,6 +21,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   muridList = INITIAL_MURID,
   parentMuridId,
   rombelList = INITIAL_ROMBEL,
+  guruId,
+  teacherList = INITIAL_TEACHERS,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'radar' | 'habits' | 'academic' | 'artifacts' | 'awards'
@@ -32,9 +36,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   };
 
   const isKS = userRole === 'kepala_sekolah';
-  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
   const [selectedClass, setSelectedClass] = useState<string>(
-    userRole === 'guru' ? getGuruClass(rombelList) ?? '' : ''
+    userRole === 'guru' ? getGuruClass(rombelList, guruId) ?? '' : ''
   );
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
   const classMuridList = visibleMurid.filter((m) => !selectedClass || m.rombel === selectedClass);
@@ -343,7 +347,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                       <div>
                         <span className="font-semibold text-slate-400 block">Wali Kelas:</span>
                         <span className="font-bold text-slate-700">
-                          {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}
+                          {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}
                         </span>
                       </div>
                       <div>
@@ -386,7 +390,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                 <div className="text-xs text-slate-700">
                   <p className="font-bold text-teal-950 mb-1">
                     Refleksi & Catatan Guru Kelas {activeMurid.rombel} (
-                    {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}):
+                    {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}):
                   </p>
                   <p className="italic leading-relaxed text-slate-600">
                     {activeMurid.id === 'm-4a-2' ? (

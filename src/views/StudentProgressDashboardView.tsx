@@ -7,32 +7,34 @@ interface StudentProgressDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenQuickRecord?: () => void;
   rombelList?: RombelRecord[];
+  muridList?: MuridRecord[];
 }
 
 export const StudentProgressDashboardView: React.FC<StudentProgressDashboardViewProps> = ({
   onNavigate,
   onOpenQuickRecord,
   rombelList = INITIAL_ROMBEL,
+  muridList = INITIAL_MURID,
 }) => {
   const [filterMode, setFilterMode] = useState<'harian' | 'bulanan'>('harian');
   const [selectedDay, setSelectedDay] = useState<number>(25);
   const [selectedMonth, setSelectedMonth] = useState<string>('September 2025');
 
   // Murid selection state
-  const [selectedRombel, setSelectedRombel] = useState<string>('Kelas IV-A');
-  const [selectedMuridId, setSelectedMuridId] = useState<string>('m-4a-1');
+  const [selectedRombel, setSelectedRombel] = useState<string>('Semua Kelas');
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
 
   const rombelOptions = ['Semua Kelas', ...rombelList.map((r) => r.name)];
 
   const availableMuridList =
     selectedRombel === 'Semua Kelas'
-      ? INITIAL_MURID
-      : INITIAL_MURID.filter((m) => m.rombel === selectedRombel);
+      ? muridList
+      : muridList.filter((m) => m.rombel === selectedRombel);
 
   const activeMurid =
-    INITIAL_MURID.find((m) => m.id === selectedMuridId) ||
+    muridList.find((m) => m.id === selectedMuridId) ||
     availableMuridList[0] ||
-    INITIAL_MURID[0];
+    muridList[0];
 
   // Daily time inputs for Bangun & Tidur
   const [wakeUpTime, setWakeUpTime] = useState<string>(activeMurid.wakeUpTime || '05:00');
@@ -46,7 +48,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
 
   const handleSelectMurid = (mId: string) => {
     setSelectedMuridId(mId);
-    const m = INITIAL_MURID.find((x) => x.id === mId);
+    const m = muridList.find((x) => x.id === mId);
     if (m) {
       setWakeUpTime(m.wakeUpTime);
       setBedTime(m.bedTime);
@@ -327,8 +329,8 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   setSelectedRombel(r);
                   const first =
                     r === 'Semua Kelas'
-                      ? INITIAL_MURID[0]
-                      : INITIAL_MURID.find((m) => m.rombel === r) || INITIAL_MURID[0];
+                      ? muridList[0]
+                      : muridList.find((m) => m.rombel === r) || muridList[0];
                   handleSelectMurid(first.id);
                 }}
                 className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"

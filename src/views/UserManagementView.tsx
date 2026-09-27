@@ -44,6 +44,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   onUpdatePrincipalPhoto,
   rombelList = INITIAL_ROMBEL,
 }) => {
+  const defaultRombel = rombelList[0]?.name ?? '';
+  const defaultFase = rombelList[0]?.fase ?? 'fase-a';
   const [activeTab, setActiveTab] = useState<'guru' | 'murid' | 'database' | 'profil'>('guru');
   const [photoPreview, setPhotoPreview] = useState<string>('');
 
@@ -219,8 +221,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [teacherForm, setTeacherForm] = useState({
     name: '',
     nip: '',
-    rombel: 'Kelas IV-A',
-    fase: 'fase-b' as 'fase-a' | 'fase-b' | 'fase-c',
+    rombel: defaultRombel,
+    fase: defaultFase,
     subject: 'Guru Kelas / Tematik',
     isObserver: false,
     teacherType: 'Guru Kelas' as 'Guru Kelas' | 'Guru Mata Pelajaran',
@@ -232,8 +234,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     nisn: '',
     nis: '',
     gender: 'L' as 'L' | 'P',
-    rombel: 'Kelas IV-A',
-    fase: 'fase-b' as 'fase-a' | 'fase-b' | 'fase-c',
+    rombel: defaultRombel,
+    fase: defaultFase,
     parentName: '',
     parentPhone: '',
     tanggalLahir: '',
@@ -339,8 +341,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setTeacherForm({
       name: '',
       nip: '',
-      rombel: 'Kelas IV-A',
-      fase: 'fase-b',
+      rombel: defaultRombel,
+      fase: defaultFase,
       subject: 'Guru Kelas / Tematik',
       isObserver: false,
       teacherType: 'Guru Kelas',
@@ -422,8 +424,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       nisn: '',
       nis: '',
       gender: 'L',
-      rombel: 'Kelas IV-A',
-      fase: 'fase-b',
+      rombel: defaultRombel,
+      fase: defaultFase,
       parentName: '',
       parentPhone: '',
       tanggalLahir: '',
@@ -792,8 +794,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                       setTeacherForm({
                         name: '',
                         nip: '',
-                        rombel: 'Kelas IV-A',
-                        fase: 'fase-b',
+                        rombel: defaultRombel,
+                        fase: defaultFase,
                         subject: '',
                         isObserver: false,
                         teacherType: 'Guru Kelas',
@@ -1151,8 +1153,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                       nisn: '',
                       nis: '',
                       gender: 'L',
-                      rombel: 'Kelas IV-A',
-                      fase: 'fase-b',
+                      rombel: defaultRombel,
+                      fase: defaultFase,
                       parentName: '',
                       parentPhone: '',
                       tanggalLahir: '',

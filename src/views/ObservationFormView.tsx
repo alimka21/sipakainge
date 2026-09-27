@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, UserRole, SupervisionSession } from '../types';
+import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
 
@@ -12,6 +12,7 @@ interface ObservationFormViewProps {
   onUpdateSessionStates: React.Dispatch<React.SetStateAction<Record<string, SupervisionSession>>>;
   selectedTeacherId?: string;
   onSelectTeacherId?: (id: string) => void;
+  teacherList?: TeacherRecord[];
 }
 
 // 17 Komponen Kelengkapan Perangkat Pembelajaran (Doc 1)
@@ -92,28 +93,29 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
   onUpdateSessionStates,
   selectedTeacherId: propSelectedTeacherId,
   onSelectTeacherId,
+  teacherList = INITIAL_TEACHERS,
 }) => {
   // 1. Selector for current active teacher / session
-  const [localTeacherId, setLocalTeacherId] = useState<string>('t-1');
+  const [localTeacherId, setLocalTeacherId] = useState<string>('');
   const selectedTeacherId = propSelectedTeacherId || localTeacherId;
   const setSelectedTeacherId = (id: string) => {
     if (onSelectTeacherId) onSelectTeacherId(id);
     setLocalTeacherId(id);
   };
-  const currentTeacher = INITIAL_TEACHERS.find((t) => t.id === selectedTeacherId) || INITIAL_TEACHERS[0];
+  const currentTeacher = teacherList.find((t) => t.id === selectedTeacherId) || teacherList[0];
 
   // 2. Active Tab of the 8-Step Stepper
   const [activeStepTab, setActiveStepTab] = useState<number>(3); // Default to Step 4: Penilaian
 
   const activeSession = sessionStates[selectedTeacherId] || {
     status: 'DRAFT',
-    mapel: 'IPAS (Sains & Lingkungan)',
-    kelas: 'Kelas IV-A',
-    topik: 'Ekosistem & Fotosintesis Tumbuhan',
-    tujuan: '1. Mengidentifikasi rantai makanan.',
-    tanggal: '2026-10-01',
-    jam: '08:00 - 09:30',
-    lokasi: 'Ruang Kelas IV-A',
+    mapel: currentTeacher?.subject || '',
+    kelas: currentTeacher?.rombel || '',
+    topik: '',
+    tujuan: '',
+    tanggal: '',
+    jam: '',
+    lokasi: currentTeacher?.rombel ? `Ruang ${currentTeacher.rombel}` : '',
     supervisor: 'Fahmawati, S.Pd. (Kepala Sekolah)',
     catatanAwal: '',
     rppFileName: '',
@@ -236,11 +238,11 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
             value={selectedTeacherId}
             onChange={(e) => {
               setSelectedTeacherId(e.target.value);
-              triggerToast(`Beralih ke sesi supervisi: ${INITIAL_TEACHERS.find(t => t.id === e.target.value)?.name}`);
+              triggerToast(`Beralih ke sesi supervisi: ${teacherList.find(t => t.id === e.target.value)?.name}`);
             }}
             className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
           >
-            {INITIAL_TEACHERS.map((t) => (
+            {teacherList.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} ({t.rombel})
               </option>

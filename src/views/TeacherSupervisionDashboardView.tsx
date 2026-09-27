@@ -8,6 +8,7 @@ interface TeacherSupervisionDashboardViewProps {
   onOpenObservationForm?: () => void;
   onOpenReport?: () => void;
   sessionStates?: Record<string, any>;
+  teacherList?: TeacherRecord[];
 }
 
 export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboardViewProps> = ({
@@ -15,6 +16,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   onOpenObservationForm,
   onOpenReport,
   sessionStates,
+  teacherList = INITIAL_TEACHERS,
 }) => {
   const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2026/2027');
   const [faseFilter, setFaseFilter] = useState<'all' | 'fase-a' | 'fase-b' | 'fase-c' | 'mapel'>('all');
@@ -32,19 +34,10 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
         t3: boolean;
         t4: boolean;
         t5: boolean;
-        status: 'Tuntas' | 'Dalam Proses' | 'Terjadwal';
+        status: 'Tuntas' | 'Dalam Proses' | 'Terjadwal' | 'Belum Mulai';
         score: string;
       }
-    > = {
-      't-1': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.85 / 4.0' },
-      't-2': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.40 / 4.0' },
-      't-3': { t1: true, t2: true, t3: true, t4: true, t5: false, status: 'Dalam Proses', score: '3.70 / 4.0' },
-      't-4': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.50 / 4.0' },
-      't-5': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.90 / 4.0' },
-      't-6': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.80 / 4.0' },
-      't-7': { t1: true, t2: false, t3: false, t4: false, t5: false, status: 'Terjadwal', score: '3.25 / 4.0' },
-      't-8': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.75 / 4.0' },
-    };
+    > = {};
 
     if (sessionStates) {
       Object.keys(sessionStates).forEach((teacherId) => {
@@ -67,14 +60,6 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
             const totalObs = vals.reduce((a: any, b: any) => a + b, 0) as number;
             obsAvg = totalObs / vals.length;
           }
-        } else {
-          // Default fallbacks for realism
-          if (teacherId === 't-1') obsAvg = 3.18;
-          else if (teacherId === 't-3') obsAvg = 2.90;
-          else if (teacherId === 't-4') obsAvg = 3.05;
-          else if (teacherId === 't-5') obsAvg = 4.00;
-          else if (teacherId === 't-6') obsAvg = 3.80;
-          else if (teacherId === 't-8') obsAvg = 3.75;
         }
         const scoreStr = obsAvg > 0 ? `${obsAvg.toFixed(2)} / 4.0` : '—';
 
@@ -111,7 +96,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   };
 
   // Filter teachers
-  const filteredTeachers = INITIAL_TEACHERS.filter((teacher) => {
+  const filteredTeachers = teacherList.filter((teacher) => {
     if (faseFilter !== 'all') {
       if (faseFilter === 'mapel' && !teacher.subject.includes('PAI') && !teacher.subject.includes('PJOK')) {
         return false;
@@ -126,10 +111,10 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   });
 
   // KPI calculations
-  const totalTeachers = INITIAL_TEACHERS.length;
+  const totalTeachers = teacherList.length;
   const completedSupervisions = Object.values(teacherStagesMap).filter((s) => s.status === 'Tuntas').length;
   const inProgressSupervisions = Object.values(teacherStagesMap).filter((s) => s.status === 'Dalam Proses').length;
-  const activeObservers = INITIAL_TEACHERS.filter((t) => t.isObserver).length + 1; // +1 for Kepala Sekolah
+  const activeObservers = teacherList.filter((t) => t.isObserver).length + 1; // +1 for Kepala Sekolah
 
   return (
     <div className="min-h-screen bg-slate-50/70 text-slate-800 flex flex-col">
@@ -222,7 +207,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                 <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-md text-center">
                   <span className="text-xs text-teal-200">Tuntas 5 Tahap</span>
                   <p className="text-2xl font-black text-emerald-300 tabular-nums">{completedSupervisions}</p>
-                  <span className="text-[10px] text-emerald-200">{Math.round((completedSupervisions / totalTeachers) * 100)}% Capaian</span>
+                  <span className="text-[10px] text-emerald-200">{totalTeachers ? Math.round((completedSupervisions / totalTeachers) * 100) : 0}% Capaian</span>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-md text-center">
                   <span className="text-xs text-teal-200">Dalam Proses</span>
@@ -299,7 +284,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                       faseFilter === 'all' ? 'bg-[#00685f] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Semua ({INITIAL_TEACHERS.length})
+                    Semua ({teacherList.length})
                   </button>
                   <button
                     onClick={() => setFaseFilter('fase-a')}
@@ -437,8 +422,8 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                       t3: false,
                       t4: false,
                       t5: false,
-                      status: 'Terjadwal',
-                      score: '3.50 / 4.0',
+                      status: 'Belum Mulai' as const,
+                      score: '—',
                     };
 
                     return (
@@ -581,7 +566,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                              Terjadwal
+                              {stageRecord.status}
                             </span>
                           )}
                         </td>
@@ -612,7 +597,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
             {/* Footer Summary Table */}
             <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
               <p>
-                Menampilkan <strong>{filteredTeachers.length}</strong> dari <strong>{INITIAL_TEACHERS.length}</strong> pendidik UPT SPF SDN Percontohan PAM Makassar.
+                Menampilkan <strong>{filteredTeachers.length}</strong> dari <strong>{teacherList.length}</strong> pendidik UPT SPF SDN Percontohan PAM Makassar.
               </p>
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 font-semibold text-emerald-700">

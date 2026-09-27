@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord, RombelRecord } from '../types';
-import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
-import { getGuruClass, getVisibleMurid } from '../lib/access';
+import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
+import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -9,6 +9,8 @@ interface ParentCalendarViewProps {
   userRole?: string;
   parentMuridId?: string;
   rombelList?: RombelRecord[];
+  guruId?: string;
+  teacherList?: TeacherRecord[];
   muridList?: MuridRecord[];
 }
 
@@ -19,11 +21,13 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   parentMuridId,
   rombelList = INITIAL_ROMBEL,
   muridList = INITIAL_MURID,
+  guruId,
+  teacherList = INITIAL_TEACHERS,
 }) => {
   const isKS = userRole === 'kepala_sekolah';
-  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
   const [selectedClass, setSelectedClass] = useState<string>(
-    userRole === 'guru' ? getGuruClass(rombelList) ?? '' : ''
+    userRole === 'guru' ? getGuruClass(rombelList, guruId) ?? '' : ''
   );
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
   const classMuridList = visibleMurid.filter((m) => !selectedClass || m.rombel === selectedClass);
@@ -222,7 +226,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                     <p className="mt-1 text-xs sm:text-sm text-teal-100/90 flex flex-wrap items-center gap-3">
                       <span>NISN: {activeMurid.nisn}</span>
                       <span>•</span>
-                      <span>Wali Kelas: {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}</span>
+                      <span>Wali Kelas: {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}</span>
                       <span>•</span>
                       <span>UPT SPF SDN Percontohan PAM Makassar</span>
                     </p>
@@ -746,20 +750,19 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                 </div>
               </div>
 
-              {/* Teacher Feedback for this day */}
-              <div className="mt-5 rounded-2xl bg-amber-50/80 p-3.5 ring-1 ring-amber-200/60">
-                <div className="flex items-center gap-2 text-amber-900">
-                  <span className="material-symbols-outlined text-base">school</span>
-                  <span className="text-xs font-bold">Apresiasi Wali Kelas</span>
+              {/* Wali kelas note stored on the student record */}
+              {activeMurid.notes && (
+                <div className="mt-5 rounded-2xl bg-amber-50/80 p-3.5 ring-1 ring-amber-200/60">
+                  <div className="flex items-center gap-2 text-amber-900">
+                    <span className="material-symbols-outlined text-base">school</span>
+                    <span className="text-xs font-bold">Catatan Wali Kelas</span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-amber-800 leading-relaxed">"{activeMurid.notes}"</p>
+                  <p className="mt-1 text-[10px] font-semibold text-amber-900/70">
+                    — {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}
+                  </p>
                 </div>
-                <p className="mt-1.5 text-xs text-amber-800 leading-relaxed">
-                  "Terima kasih Mama Ahmad. Kami melihat Ahmad sangat disiplin dan suka membantu
-                  teman saat kegiatan sains siang tadi. Terus pertahankan!"
-                </p>
-                <p className="mt-1 text-[10px] font-semibold text-amber-900/70">
-                  — Ibu Siti Aminah, S.Pd. (14:30 WITA)
-                </p>
-              </div>
+              )}
 
               {/* Action buttons */}
               <div className="mt-6 flex flex-col gap-2">

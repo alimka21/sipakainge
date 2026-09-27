@@ -11,6 +11,9 @@ interface AppHeaderProps {
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   principalPhotoUrl?: string;
+  guruName?: string;
+  childName?: string;
+  childClass?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -22,7 +25,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isSidebarCollapsed,
   onToggleSidebar,
   principalPhotoUrl,
+  guruName = 'Guru',
+  childName = 'Orang Tua Murid',
+  childClass,
 }) => {
+  const guruInitials = guruName
+    .replace(/^(Ibu|Bpk\.?|Bapak|Drs\.?|Dr\.?)\s+/i, '')
+    .split(/\s+/)
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
@@ -97,21 +110,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <>
                 <div className="text-right hidden md:block">
                   <div className="text-xs text-slate-900 leading-tight font-bold">
-                    Siti Aminah, S.Pd.
+                    {guruName}
                   </div>
-                  <div className="text-[10px] text-slate-500">Guru Kelas & Observer</div>
+                  <div className="text-[10px] text-slate-500">Guru</div>
                 </div>
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs ring-2 ring-teal-600/30 shrink-0">
-                  SA
+                  {guruInitials}
                 </div>
               </>
             ) : (
               <>
                 <div className="text-right hidden md:block">
                   <div className="text-xs text-slate-900 leading-tight font-bold">
-                    Ahmad Faris Al-Fatih
+                    {childName}
                   </div>
-                  <div className="text-[10px] text-slate-500">Murid Kelas IV-A</div>
+                  <div className="text-[10px] text-slate-500">{childClass ? `Murid ${childClass}` : 'Orang Tua Murid'}</div>
                 </div>
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center ring-2 ring-teal-600/30 shrink-0">
                   <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -154,8 +167,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 {userRole === 'kepala_sekolah'
                   ? 'Fahmawati, S.Pd. (Kepala Sekolah)'
                   : userRole === 'guru'
-                  ? 'Siti Aminah, S.Pd. (Guru Kelas)'
-                  : 'Ahmad Faris Al-Fatih (Orang Tua)'}
+                  ? `${guruName} (Guru)`
+                  : `Orang Tua dari ${childName}`}
               </strong>{' '}
               dan kembali ke Beranda Utama?
             </p>

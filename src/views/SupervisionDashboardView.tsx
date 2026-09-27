@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenId, TeacherRecord } from '../types';
+import { ScreenId, TeacherRecord, MuridRecord } from '../types';
 import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
 
 interface SupervisionDashboardViewProps {
@@ -8,6 +8,8 @@ interface SupervisionDashboardViewProps {
   searchQuery: string;
   sessionStates?: Record<string, any>;
   onUpdateSessionStates?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  teacherList?: TeacherRecord[];
+  muridList?: MuridRecord[];
 }
 
 export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> = ({
@@ -16,6 +18,8 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
   searchQuery,
   sessionStates,
   onUpdateSessionStates,
+  teacherList = INITIAL_TEACHERS,
+  muridList = INITIAL_MURID,
 }) => {
   const [selectedFase, setSelectedFase] = useState<'all' | 'fase-a' | 'fase-b' | 'fase-c'>('all');
   const [selectedStage, setSelectedStage] = useState<'all' | 'pra' | 'telaah' | 'observasi' | 'refleksi' | 'tuntas'>('all');
@@ -39,7 +43,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
     let refleksi = 0;
     let tuntas = 0;
 
-    INITIAL_TEACHERS.forEach(t => {
+    teacherList.forEach(t => {
       const sess = sessionStates?.[t.id];
       const status = sess?.status || t.stage.toUpperCase();
       
@@ -79,11 +83,11 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
       { id: 7, name: 'Tidur Tepat Waktu', rate: 0, icon: 'bedtime', color: 'bg-amber-500', desc: 'Tidur malam maksimal pukul 21:00/21:30 WITA' },
     ];
 
-    const totalStudents = INITIAL_MURID.length;
+    const totalStudents = muridList.length;
     if (totalStudents > 0) {
       stats.forEach(s => {
         let doneCount = 0;
-        INITIAL_MURID.forEach(m => {
+        muridList.forEach(m => {
           if (m.habits[s.id as 1|2|3|4|5|6|7]) {
             doneCount++;
           }
@@ -258,7 +262,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
   // Helper 3: Dynamic actions generator for Section 2 queue cards
   const getPendingActions = () => {
     const actions: Array<{
-      teacher: typeof INITIAL_TEACHERS[0];
+      teacher: TeacherRecord;
       type: 'telaah' | 'observasi' | 'refleksi';
       title: string;
       desc: string;
@@ -268,7 +272,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
       btnText: string;
     }> = [];
 
-    INITIAL_TEACHERS.forEach(t => {
+    teacherList.forEach(t => {
       const sess = sessionStates?.[t.id];
       const status = sess?.status || t.stage.toUpperCase();
 
@@ -342,34 +346,34 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
   const dynamicPolicyAdvisory = getPolicyAdvisory(lowestHabit.id);
 
   // Dynamic KPIs
-  const kpiJadwalHariIni = INITIAL_TEACHERS.filter(t => {
+  const kpiJadwalHariIni = teacherList.filter(t => {
     const s = sessionStates?.[t.id]?.status || t.stage;
     return ['DISETUJUI', 'TERJADWAL', 'observasi'].includes(s);
   }).length;
 
-  const kpiMenungguTelaah = INITIAL_TEACHERS.filter(t => {
+  const kpiMenungguTelaah = teacherList.filter(t => {
     const s = sessionStates?.[t.id]?.status || t.stage;
     return ['DOKUMEN_DIUPLOAD', 'telaah'].includes(s);
   }).length;
 
-  const kpiSedangBerjalan = INITIAL_TEACHERS.filter(t => {
+  const kpiSedangBerjalan = teacherList.filter(t => {
     const s = sessionStates?.[t.id]?.status || t.stage;
     return ['PERANGKAT_DINILAI'].includes(s);
   }).length;
 
-  const kpiMenungguRefleksi = INITIAL_TEACHERS.filter(t => {
+  const kpiMenungguRefleksi = teacherList.filter(t => {
     const s = sessionStates?.[t.id]?.status || t.stage;
     return ['OBSERVASI_DILAKUKAN', 'REFLEKSI_GURU', 'refleksi'].includes(s);
   }).length;
 
-  const kpiTuntasCount = INITIAL_TEACHERS.filter(t => {
+  const kpiTuntasCount = teacherList.filter(t => {
     const s = sessionStates?.[t.id]?.status || t.stage;
     return ['SELESAI', 'tuntas'].includes(s);
   }).length;
 
-  const kpiCapaianPersen = Math.round((kpiTuntasCount / INITIAL_TEACHERS.length) * 100);
+  const kpiCapaianPersen = Math.round((kpiTuntasCount / Math.max(teacherList.length, 1)) * 100);
 
-  const filteredTeachers = INITIAL_TEACHERS.filter((t) => {
+  const filteredTeachers = teacherList.filter((t) => {
     const matchFase = selectedFase === 'all' || t.fase === selectedFase;
     
     let matchStage = true;
@@ -463,7 +467,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="text-[11px] text-slate-500">Fase A, B & C</span>
           </div>
           <div className="w-full bg-[#eff4ff] h-1.5 rounded-full mt-3 overflow-hidden">
-            <div className="bg-[#00685f] h-full rounded-full" style={{ width: `${(kpiJadwalHariIni / INITIAL_TEACHERS.length) * 100}%` }}></div>
+            <div className="bg-[#00685f] h-full rounded-full" style={{ width: `${(kpiJadwalHariIni / Math.max(teacherList.length, 1)) * 100}%` }}></div>
           </div>
         </div>
 
@@ -484,7 +488,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="text-[11px] text-amber-600 font-medium">Butuh Verifikasi</span>
           </div>
           <div className="w-full bg-[#eff4ff] h-1.5 rounded-full mt-3 overflow-hidden">
-            <div className="bg-[#4b41e1] h-full rounded-full" style={{ width: `${(kpiMenungguTelaah / INITIAL_TEACHERS.length) * 100}%` }}></div>
+            <div className="bg-[#4b41e1] h-full rounded-full" style={{ width: `${(kpiMenungguTelaah / Math.max(teacherList.length, 1)) * 100}%` }}></div>
           </div>
         </div>
 
@@ -505,7 +509,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="text-[11px] text-[#006947] font-semibold">Sesi Berlangsung</span>
           </div>
           <div className="w-full bg-[#eff4ff] h-1.5 rounded-full mt-3 overflow-hidden">
-            <div className="bg-[#00855b] h-full rounded-full" style={{ width: `${(kpiSedangBerjalan / INITIAL_TEACHERS.length) * 100}%` }}></div>
+            <div className="bg-[#00855b] h-full rounded-full" style={{ width: `${(kpiSedangBerjalan / Math.max(teacherList.length, 1)) * 100}%` }}></div>
           </div>
         </div>
 
@@ -526,7 +530,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="text-[11px] text-slate-600">Proses Umpan Balik</span>
           </div>
           <div className="w-full bg-[#eff4ff] h-1.5 rounded-full mt-3 overflow-hidden">
-            <div className="bg-[#6bd8cb] h-full rounded-full" style={{ width: `${(kpiMenungguRefleksi / INITIAL_TEACHERS.length) * 100}%` }}></div>
+            <div className="bg-[#6bd8cb] h-full rounded-full" style={{ width: `${(kpiMenungguRefleksi / Math.max(teacherList.length, 1)) * 100}%` }}></div>
           </div>
         </div>
 
@@ -540,7 +544,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl font-bold text-[#00685f] tabular-nums">{kpiCapaianPersen}%</span>
-            <span className="text-xs text-slate-500 font-medium">({kpiTuntasCount}/{INITIAL_TEACHERS.length} Guru)</span>
+            <span className="text-xs text-slate-500 font-medium">({kpiTuntasCount}/{teacherList.length} Guru)</span>
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-slate-500">
             <span className="material-symbols-outlined text-xs text-[#006947]">trending_up</span>
@@ -694,7 +698,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </div>
 
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
-            <p className="text-xs font-bold text-slate-700">Rangkaian Alur Kemajuan Pendidik (Total {INITIAL_TEACHERS.length} Guru):</p>
+            <p className="text-xs font-bold text-slate-700">Rangkaian Alur Kemajuan Pendidik (Total {teacherList.length} Guru):</p>
             
             {/* Elegant SVG Connected Flow Graph */}
             <div className="relative py-2 px-1">
@@ -789,27 +793,27 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
               <span className="text-[11px] font-bold text-slate-500">Bobot Distribusi Tahapan Saat Ini:</span>
               <div className="h-4 w-full rounded-full bg-slate-200 flex overflow-hidden shadow-inner">
                 <div 
-                  style={{ width: `${Math.max(8, (dynamicCounts.pra / INITIAL_TEACHERS.length) * 100)}%` }} 
+                  style={{ width: `${Math.max(8, (dynamicCounts.pra / Math.max(teacherList.length, 1)) * 100)}%` }} 
                   className="bg-sky-500 hover:opacity-90 transition-all duration-300" 
                   title={`Pra-Observasi: ${dynamicCounts.pra} Guru`}
                 ></div>
                 <div 
-                  style={{ width: `${Math.max(8, (dynamicCounts.telaah / INITIAL_TEACHERS.length) * 100)}%` }} 
+                  style={{ width: `${Math.max(8, (dynamicCounts.telaah / Math.max(teacherList.length, 1)) * 100)}%` }} 
                   className="bg-indigo-500 hover:opacity-90 transition-all duration-300 border-l border-white" 
                   title={`Telaah Modul: ${dynamicCounts.telaah} Guru`}
                 ></div>
                 <div 
-                  style={{ width: `${Math.max(8, (dynamicCounts.observasi / INITIAL_TEACHERS.length) * 100)}%` }} 
+                  style={{ width: `${Math.max(8, (dynamicCounts.observasi / Math.max(teacherList.length, 1)) * 100)}%` }} 
                   className="bg-rose-500 hover:opacity-90 transition-all duration-300 border-l border-white" 
                   title={`Observasi Kelas: ${dynamicCounts.observasi} Guru`}
                 ></div>
                 <div 
-                  style={{ width: `${Math.max(8, (dynamicCounts.refleksi / INITIAL_TEACHERS.length) * 100)}%` }} 
+                  style={{ width: `${Math.max(8, (dynamicCounts.refleksi / Math.max(teacherList.length, 1)) * 100)}%` }} 
                   className="bg-amber-500 hover:opacity-90 transition-all duration-300 border-l border-white" 
                   title={`Dialog Refleksi: ${dynamicCounts.refleksi} Guru`}
                 ></div>
                 <div 
-                  style={{ width: `${Math.max(8, (dynamicCounts.tuntas / INITIAL_TEACHERS.length) * 100)}%` }} 
+                  style={{ width: `${Math.max(8, (dynamicCounts.tuntas / Math.max(teacherList.length, 1)) * 100)}%` }} 
                   className="bg-emerald-500 hover:opacity-90 transition-all duration-300 border-l border-white" 
                   title={`Siklus Tuntas: ${dynamicCounts.tuntas} Guru`}
                 ></div>

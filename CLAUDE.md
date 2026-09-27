@@ -132,15 +132,16 @@ whenever you learn something new or change a pattern described here.
   murid.rombel is the class *name*); delete is blocked while the class has
   students; duplicate names rejected. Mirrors the DB rules
   (`murid_rombel_fkey` ON UPDATE CASCADE / ON DELETE RESTRICT, unique name).
-- The demo guru account is always `t-1` (Ibu Siti Aminah). Her class is
-  `rombelList.find(r => r.waliKelasId === 't-1')?.name`, so reassigning her in
-  Manajemen Kelas changes what the guru sees. Sidebar labels in
-  `AppSidebar.tsx` still say "Kelas IV-A" statically.
+- The logged-in guru is `guruId` in `App.tsx` (set at login by NIP). Their
+  class is `getGuruClass(rombelList, guruId)`; it feeds the views, the sidebar
+  label (`guruClass` prop) and the header name.
 
 ## Who can see which students — `src/lib/access.ts`
-- `getVisibleMurid(role, muridList, rombelList, parentMuridId)` is the ONE rule:
-  kepala_sekolah = all students; guru = only the class where
-  `waliKelasId === 't-1'` (`getGuruClass`); orang_tua = only `parentMuridId`.
+- `getVisibleMurid(role, muridList, rombelList, parentMuridId, guruId)` is the
+  ONE rule: kepala_sekolah = all students; guru = only the class whose
+  `waliKelasId === guruId`; orang_tua = only `parentMuridId`.
+- `getWaliKelasName(rombelName, rombelList, teacherList)` — use it wherever a
+  student's wali kelas is displayed; never hardcode a teacher name.
 - Used by `ParentDashboardView` (Buku Pantau), `ParentCalendarView`,
   `ParentPortfolioView`. `ClassHabitsInputView` (and the 4 Data Individu
   screens) use `getGuruClass` and never fall back to a student outside the
@@ -196,6 +197,47 @@ whenever you learn something new or change a pattern described here.
 - RLS policy `sipakainge_dev_akses_penuh` gives anon full read/write on every
   table because the app has no Supabase Auth. Development only — murid holds
   children's NISN, birth date, address, parent phone.
+
+## No sample people (since 2026-09-28)
+- `INITIAL_TEACHERS` and `INITIAL_MURID` are empty; `INITIAL_ROMBEL` keeps the
+  classes with `waliKelasId: null`; `sessionStates` starts `{}`. The SQL
+  seed likewise only has `school_settings` (Kepala Sekolah) + classes. Section
+  0 of `supabase-schema.sql` has an opt-in DELETE for existing rows.
+
+## Class list (since 2026-09-28, later same day)
+- `INITIAL_ROMBEL` is 16 classes named `Kelas <tingkat>.<rombel>` (e.g.
+  `Kelas 1.1`, `Kelas 4.3`, `Kelas 6.2`) — tingkat 1-2 = `fase-a`, 3-4 =
+  `fase-b`, 5-6 = `fase-c`. This replaced the old 5-class list (`Kelas I-B`,
+  `III-A`, `IV-A`, `V-B`, `VI-C`, ids `r-1b`…`r-6c`) everywhere: `mockData.ts`,
+  `supabase-schema.sql` seed, and every hardcoded `'Kelas IV-A'` default used
+  as a form/filter fallback (`UserManagementView` add-teacher/add-murid forms,
+  `StudentProgressDashboardView`, `TeacherSelfSupervisionView`,
+  `ObservationFormView`'s blank-session template). If you add another such
+  default, source it from `rombelList[0]` (or `'Semua Kelas'` for a filter),
+  never a literal class name — the list will change again.
+- `supabase-schema.sql` section "Old class list (superseded 2026-09-28)"
+  deletes the 5 old rows by id, but only `WHERE NOT EXISTS (... murid ...)` —
+  a class a school actually has students in is left alone instead of
+  crashing the whole script (`murid_rombel_fkey` is `ON DELETE RESTRICT`).
+  Verified with PGlite: fresh DB → clean 16; DB with real students in old
+  classes → those classes survive, the other old ones are dropped, and the
+  16 new ones are still added, no error either way.
+- Login: guru is matched by NIP (`normalizeNip`), orang tua by NISN; unknown
+  NIP/NISN shows a toast and does not log in. Kepala Sekolah is not a
+  teacher record (lives in `school_settings` / hardcoded profile).
+- Every screen must survive empty lists. `EmptyDataNotice` is rendered by
+  `App.tsx` for Observasi / Supervisi Klinis Saya / dasbor murid when there
+  is no data; everything else renders empty tables. No fabricated scores:
+  a teacher without a session shows "Belum Mulai" / "—" / "Belum dinilai".
+- Views that used to read static `INITIAL_*` now take `teacherList` /
+  `muridList` props from App (SupervisionDashboardView,
+  TeacherSupervisionDashboardView, ObservationFormView,
+  TeacherSelfSupervisionView, StudentProgressDashboardView, QuickRecordModal
+  via `muridOptions`). The `INITIAL_*` defaults on those props are only
+  fallbacks.
+- Regression check: SSR smoke test (renderToString of every screen × role,
+  empty data and 1 guru + 1 murid, flags crashes / "NaN" / old sample names /
+  fake scores). Bundled with esbuild in the scratchpad; not committed.
 
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai

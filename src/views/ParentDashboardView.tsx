@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, MuridRecord, RombelRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
-import { getGuruClass, getVisibleMurid } from '../lib/access';
+import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 
 interface ParentDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -11,6 +11,8 @@ interface ParentDashboardViewProps {
   principalPhotoUrl?: string;
   parentMuridId?: string;
   rombelList?: RombelRecord[];
+  guruId?: string;
+  teacherList?: TeacherRecord[];
 }
 
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
@@ -21,10 +23,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   principalPhotoUrl,
   parentMuridId,
   rombelList = INITIAL_ROMBEL,
+  guruId,
+  teacherList = INITIAL_TEACHERS,
 }) => {
   const isOrangTua = userRole === 'orang_tua';
   const isKS = userRole === 'kepala_sekolah';
-  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId);
+  const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
 
   const activeMurid = isOrangTua
@@ -51,7 +55,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <p className="text-xs text-slate-500 mt-0.5">
                 {isKS
                   ? 'Kepala Sekolah dapat memantau seluruh siswa dari semua kelas.'
-                  : `Hanya siswa ${getGuruClass(rombelList) ?? 'kelas perwalian Anda'} yang dapat dipantau.`}
+                  : `Hanya siswa ${getGuruClass(rombelList, guruId) ?? 'kelas perwalian Anda'} yang dapat dipantau.`}
               </p>
             </div>
           </div>
@@ -310,7 +314,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500">
                   <span className="font-medium text-slate-700 truncate max-w-[200px]">
-                    Wali Kelas: Ibu Siti Aminah
+                    Wali Kelas: {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}
                   </span>
                   <span className="text-[#00685f] font-bold">Tercapai Optimal</span>
                 </div>

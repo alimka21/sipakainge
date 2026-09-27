@@ -14,6 +14,7 @@ interface ClassHabitsInputViewProps {
   /** When set, the view opens directly on this workspace tab and hides the tab switcher,
    * so it behaves as a standalone page reached from its own sidebar menu. */
   lockedTab?: WorkspaceTab;
+  guruId?: string;
   rombelList?: RombelRecord[];
 }
 
@@ -32,14 +33,12 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   onUpdateMuridList,
   lockedTab,
   rombelList = INITIAL_ROMBEL,
+  guruId,
 }) => {
-  // Current active teacher is Ibu Siti Aminah (Wali Kelas IV-A)
   const currentTeacher = {
-    name: 'Ibu Siti Aminah, S.Pd.',
-    nip: '19840212 200801 2 018',
-    assignedClass: getGuruClass(rombelList) ?? '',
-    fase: 'Fase B',
+    assignedClass: getGuruClass(rombelList, guruId) ?? '',
   };
+  const guruClassLabel = currentTeacher.assignedClass || '(belum ditugaskan)';
 
   const [muridData, setMuridData] = useState<MuridRecord[]>(propMuridList || INITIAL_MURID);
   const [selectedClass, setSelectedClass] = useState<string>(
@@ -357,7 +356,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
             <span className="text-slate-400">Ruang Pendidik</span>
             <span className="text-slate-300">/</span>
             <span className="text-slate-400">
-              {userRole === 'kepala_sekolah' ? 'Supervisi Karakter KS' : `Wali ${currentTeacher.assignedClass}`}
+              {userRole === 'kepala_sekolah' ? 'Supervisi Karakter KS' : `Wali ${guruClassLabel}`}
             </span>
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-teal-800">
@@ -388,8 +387,8 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                     {!lockedTab || lockedTab === 'habits'
                       ? userRole === 'kepala_sekolah'
                         ? 'Pemantauan 7 KAIH Seluruh Kelas (Kepala Sekolah)'
-                        : `Isian & Pemantauan 7 KAIH (${currentTeacher.assignedClass})`
-                      : `${currentTabMeta.title} (${userRole === 'kepala_sekolah' ? 'Seluruh Kelas' : currentTeacher.assignedClass})`}
+                        : `Isian & Pemantauan 7 KAIH (${guruClassLabel})`
+                      : `${currentTabMeta.title} (${userRole === 'kepala_sekolah' ? 'Seluruh Kelas' : guruClassLabel})`}
                   </h1>
                   <span className="rounded-full bg-[#6ffbbe]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#6ffbbe] border border-[#6ffbbe]/30">
                     {userRole === 'kepala_sekolah' ? 'Super Admin' : 'Wali Kelas Resmi'}
@@ -399,7 +398,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                   {!lockedTab || lockedTab === 'habits' ? (
                     userRole === 'guru' ? (
                       <>
-                        Sebagai <strong>Wali Kelas {currentTeacher.assignedClass}</strong>, Anda berwenang mengisi ibadah jam sekolah (<strong>Shalat Dhuha & Dhuhur</strong>) serta memvalidasi pembiasaan rumah yang dilaporkan oleh orang tua murid.
+                        Sebagai <strong>Wali Kelas {guruClassLabel}</strong>, Anda berwenang mengisi ibadah jam sekolah (<strong>Shalat Dhuha & Dhuhur</strong>) serta memvalidasi pembiasaan rumah yang dilaporkan oleh orang tua murid.
                       </>
                     ) : (
                       <>
@@ -435,7 +434,9 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
               </div>
               <p className="text-xs text-slate-500 mt-0.5 pl-8">
                 {userRole === 'guru'
-                  ? `Khusus murid ${currentTeacher.assignedClass} sesuai penugasan resmi Kepala Sekolah`
+                  ? currentTeacher.assignedClass
+                    ? `Khusus murid ${currentTeacher.assignedClass} sesuai penugasan resmi Kepala Sekolah`
+                    : 'Anda belum ditugaskan sebagai wali kelas. Hubungi Kepala Sekolah untuk penugasan di Manajemen Kelas.'
                   : selectedClass
                   ? `Daftar siswa pada ${selectedClass}`
                   : 'Silakan pilih rombel kelas terlebih dahulu'}
