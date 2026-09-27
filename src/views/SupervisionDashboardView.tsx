@@ -189,7 +189,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             type="button"
             onClick={() => {
               onSelectTeacherForObservation(t.id);
-              onNavigate('follow_up_plan');
+              onNavigate('teacher_report');
             }}
             className="px-3 py-1.5 rounded-lg bg-[#4b41e1] hover:bg-[#645efb] text-white font-semibold text-xs transition-all shadow-xs"
           >
@@ -214,7 +214,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             type="button"
             onClick={() => {
               onSelectTeacherForObservation(t.id);
-              onNavigate('follow_up_plan');
+              onNavigate('teacher_report');
             }}
             className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-all"
           >
@@ -442,15 +442,6 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
 
           <button
             type="button"
-            onClick={() => triggerToast('Filter Periode / Rombel disetel ke Semester Genap')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#dce9ff] hover:bg-[#d3e4fe] text-slate-800 text-xs font-semibold transition-colors shadow-sm"
-          >
-            <span className="material-symbols-outlined text-base text-slate-600">filter_list</span>
-            <span>Filter Periode / Rombel</span>
-          </button>
-
-          <button
-            type="button"
             onClick={onOpenScheduleModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00685f] hover:bg-[#008378] text-white text-xs font-bold transition-all shadow-sm transform hover:-translate-y-0.5"
           >
@@ -657,7 +648,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
                     onClick={() => {
                       onSelectTeacherForObservation(act.teacher.id);
                       if (act.type === 'refleksi') {
-                        onNavigate('follow_up_plan');
+                        onNavigate('teacher_report');
                       } else {
                         onNavigate('observation_form');
                       }

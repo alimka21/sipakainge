@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ScreenId, MuridRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, INITIAL_MURID } from '../data/mockData';
+import { HABIT_LIST, INITIAL_MURID } from '../data/mockData';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
   onDownloadReport: () => void;
   userRole?: string;
   muridList?: MuridRecord[];
+  parentMuridId?: string;
 }
 
 export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
@@ -14,6 +15,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   onDownloadReport,
   userRole = 'orang_tua',
   muridList = INITIAL_MURID,
+  parentMuridId,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'radar' | 'habits' | 'academic' | 'artifacts' | 'awards'
@@ -24,7 +26,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
     userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
   );
   const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : 'm-4a-1'
+    userRole === 'kepala_sekolah' ? '' : parentMuridId || 'm-4a-1'
   );
 
   const showToast = (msg: string) => {
@@ -115,7 +117,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
         title: art.title,
         category: art.category,
         date: art.date,
-        image: art.imageUrl || APP_ASSETS.artPosterWater,
+        image: art.imageUrl || undefined,
         description: art.description,
         appreciation: art.feedback || 'Praktik baik diunggah oleh Guru Kelas',
       }))
@@ -128,7 +130,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       title: 'Poster Kampanye: "Hemat Air, Jaga Bumi Kita"',
       category: 'Proyek Seni & Lingkungan',
       date: '18 September 2025',
-      image: APP_ASSETS.artPosterWater,
+      icon: '🎨',
       description:
         'Karya poster visual perpaduan cat air dan krayon dalam rangka Pekan Peduli Air Bersih UPT SPF SDN Percontohan PAM.',
       appreciation: 'Dipilih menjadi poster utama di mading sekolah & bernilai 95 oleh Guru Seni.',
@@ -138,7 +140,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       title: 'Modul Percobaan Mini Fotosintesis Tumbuhan Hydrilla',
       category: 'Praktikum Sains Mandiri',
       date: '12 September 2025',
-      image: APP_ASSETS.artScienceProject,
+      icon: '🔬',
       description:
         'Eksperimen membuktikan produksi oksigen pada tumbuhan air saat terkena sinar matahari pagi di laboratorium sekolah.',
       appreciation: 'Dianugerahi presentasi terbaik dalam kelompok kerja Fase B.',
@@ -290,11 +292,19 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
                   <div className="relative">
-                    <img
-                      src={activeMurid.avatar || APP_ASSETS.studentAhmad}
-                      alt={activeMurid.name}
-                      className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover ring-4 ring-teal-100 shadow-md"
-                    />
+                    {activeMurid.avatar ? (
+                      <img
+                        src={activeMurid.avatar}
+                        alt={activeMurid.name}
+                        className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover ring-4 ring-teal-100 shadow-md"
+                      />
+                    ) : (
+                      <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center ring-4 ring-teal-100 shadow-md">
+                        <span className="material-symbols-outlined text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {activeMurid.gender === 'L' ? 'boy' : 'girl'}
+                        </span>
+                      </div>
+                    )}
                     <span
                       className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md ring-2 ring-white"
                       title="Terverifikasi Dapodik"
@@ -348,7 +358,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                 {/* Quick Holistic Stats */}
                 <div className="flex flex-row lg:flex-col gap-3 shrink-0">
                   <div className="flex items-center gap-3 rounded-2xl bg-teal-50/70 p-3.5 ring-1 ring-teal-600/10">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
+                    <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-teal-700 px-2 text-sm font-bold text-white whitespace-nowrap">
                       {activeMurid.id === 'm-4a-2' ? '94.8' : '92.2'}
                     </div>
                     <div>
@@ -358,7 +368,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3.5 ring-1 ring-emerald-600/10">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white font-bold">
+                    <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-emerald-700 px-2 text-sm font-bold text-white whitespace-nowrap">
                       {activeMurid.id === 'm-4a-2' ? '100%' : '94.6%'}
                     </div>
                     <div>
@@ -712,11 +722,17 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                     className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition"
                   >
                     <div className="h-52 w-full overflow-hidden bg-slate-100">
-                      <img
-                        src={art.image}
-                        alt={art.title}
-                        className="h-full w-full object-cover transition duration-300 hover:scale-105"
-                      />
+                      {(art as any).image ? (
+                        <img
+                          src={(art as any).image}
+                          alt={art.title}
+                          className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-teal-50 text-6xl">
+                          {(art as any).icon || '🖼️'}
+                        </div>
+                      )}
                     </div>
                     <div className="p-5">
                       <div className="flex items-center justify-between">

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { UserRole, ScreenId } from '../types';
-import { APP_ASSETS } from '../data/mockData';
 import { SchoolLogo } from './SchoolLogo';
 
 interface AppHeaderProps {
@@ -11,6 +10,7 @@ interface AppHeaderProps {
   onSearchChange: (q: string) => void;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
+  principalPhotoUrl?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -21,6 +21,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onSearchChange,
   isSidebarCollapsed,
   onToggleSidebar,
+  principalPhotoUrl,
 }) => {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -69,20 +70,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
         {/* Right: Role, Notifications, Avatar */}
         <div className="flex items-center gap-2 sm:gap-3.5">
-          {/* Workspace Active Role Badge (Static) */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 shadow-3xs">
-            <span className="material-symbols-outlined text-sm text-[#00685f]">shield_person</span>
-            <span className="hidden sm:inline">
-              {userRole === 'kepala_sekolah'
-                ? 'Akses Kepala Sekolah'
-                : userRole === 'guru'
-                ? 'Akses Guru / Observer'
-                : 'Akses Orang Tua / Murid'}
-            </span>
-            <span className="sm:hidden">
-              {userRole === 'kepala_sekolah' ? 'Kepala' : userRole === 'guru' ? 'Guru' : 'Ortu'}
-            </span>
-          </div>
 
           {/* User Profile Block */}
           <div className="flex items-center gap-2 pl-1 border-r border-slate-100 pr-2 sm:pr-3">
@@ -94,11 +81,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500">Kepala Sekolah (Super Admin)</div>
                 </div>
-                <img
-                  alt="Foto Profil Kepala Sekolah"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-teal-600/30 shadow-sm"
-                  src={APP_ASSETS.principalAvatar}
-                />
+                {principalPhotoUrl ? (
+                  <img
+                    alt="Foto Profil Kepala Sekolah"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-teal-600/30 shadow-sm"
+                    src={principalPhotoUrl}
+                  />
+                ) : (
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs ring-2 ring-teal-600/30 shrink-0">
+                    F
+                  </div>
+                )}
               </>
             ) : userRole === 'guru' ? (
               <>
@@ -108,11 +101,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500">Guru Kelas & Observer</div>
                 </div>
-                <img
-                  alt="Foto Profil Ibu Siti Aminah"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-teal-600/30 shadow-sm"
-                  src={APP_ASSETS.sitiAminahAvatar}
-                />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs ring-2 ring-teal-600/30 shrink-0">
+                  SA
+                </div>
               </>
             ) : (
               <>
@@ -122,11 +113,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500">Murid Kelas IV-A</div>
                 </div>
-                <img
-                  alt="Foto Profil Ahmad Faris"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-teal-600/30 shadow-sm"
-                  src={APP_ASSETS.studentAhmad}
-                />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center ring-2 ring-teal-600/30 shrink-0">
+                  <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    boy
+                  </span>
+                </div>
               </>
             )}
           </div>

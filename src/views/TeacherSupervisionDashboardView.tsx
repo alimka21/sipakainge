@@ -6,14 +6,14 @@ import { PublicNavbar } from '../components/PublicNavbar';
 interface TeacherSupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenObservationForm?: () => void;
-  onOpenFollowUp?: () => void;
+  onOpenReport?: () => void;
   sessionStates?: Record<string, any>;
 }
 
 export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboardViewProps> = ({
   onNavigate,
   onOpenObservationForm,
-  onOpenFollowUp,
+  onOpenReport,
   sessionStates,
 }) => {
   const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2026/2027');
@@ -421,8 +421,8 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                     <th className="py-3.5 px-2.5 text-center min-w-[90px]" title="Tahap 4: Dialog Reflektif Pasca-Observasi (Sipakainge)">
                       4. Refleksi
                     </th>
-                    <th className="py-3.5 px-2.5 text-center min-w-[90px]" title="Tahap 5: Rencana Tindak Lanjut (RTL)">
-                      5. RTL
+                    <th className="py-3.5 px-2.5 text-center min-w-[90px]" title="Tahap 5: Laporan Hasil Supervisi">
+                      5. Laporan
                     </th>
                     <th className="py-3.5 px-4 text-center min-w-[110px]">Status Capaian</th>
                     <th className="py-3.5 px-4 text-center min-w-[100px]" title="Skor rata-rata dari 22 indikator pelaksanaan KBM Pembelajaran Mendalam">Rerata Skor Obs</th>
@@ -553,10 +553,10 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                           </span>
                         </td>
 
-                        {/* Tahap 5: Rencana Tindak Lanjut */}
+                        {/* Tahap 5: Laporan Hasil Supervisi */}
                         <td className="py-3.5 px-2.5 text-center">
                           <span
-                            title={stageRecord.t5 ? 'Tahap 5: RTL Selesai' : 'Tahap 5: RTL Belum'}
+                            title={stageRecord.t5 ? 'Tahap 5: Laporan Selesai' : 'Tahap 5: Laporan Belum'}
                             className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t5
                                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -667,9 +667,9 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
 
               <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-100 space-y-1">
                 <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">Tahap 5</span>
-                <p className="font-bold text-xs text-slate-900">Rencana Tindak Lanjut</p>
+                <p className="font-bold text-xs text-slate-900">Laporan Hasil Supervisi</p>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Penyusunan RTL pengembangan diri dan diseminasi praktik baik di Komunitas Belajar / KKG sekolah.
+                  Laporan hasil supervisi guru disusun dan didiseminasikan di Komunitas Belajar / KKG sekolah.
                 </p>
               </div>
             </div>
@@ -738,7 +738,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                   { key: 't2', label: '2. Verifikasi Modul Ajar (RPP)', desc: 'ATP, LKPD berjenjang, dan asesmen formatif otentik' },
                   { key: 't3', label: '3. Pelaksanaan Observasi Kelas', desc: `Pengamatan di ruang ${selectedTeacherModal.rombel}` },
                   { key: 't4', label: '4. Dialog Reflektif Pasca-Observasi (Sipakainge)', desc: 'Refleksi mandiri kemitraan & penguatan praktik baik' },
-                  { key: 't5', label: '5. Rencana Tindak Lanjut (RTL) & KKG', desc: 'Diseminasi praktik baik di komunitas belajar sekolah' },
+                  { key: 't5', label: '5. Laporan Hasil Supervisi & KKG', desc: 'Diseminasi praktik baik di komunitas belajar sekolah' },
                 ].map((s) => {
                   const currentStatus = teacherStagesMap[selectedTeacherModal.id];
                   const isDone = currentStatus ? currentStatus[s.key as keyof typeof currentStatus] : false;

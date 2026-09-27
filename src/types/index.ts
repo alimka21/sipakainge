@@ -8,12 +8,17 @@ export type ScreenId =
   | 'teacher_my_supervision'
   | 'student_dashboard'
   | 'observation_form'
-  | 'follow_up_plan'
+  | 'teacher_report'
   | 'user_management'
   | 'class_habits_input'
   | 'parent_dashboard'
   | 'parent_calendar'
-  | 'parent_portfolio';
+  | 'parent_portfolio'
+  | 'academic_input'
+  | 'portfolio_input'
+  | 'award_input'
+  | 'attendance_input'
+  | 'class_management';
 
 export interface PrayerTimesChecklist {
   subuh: boolean;
@@ -36,12 +41,21 @@ export interface MuridRecord {
   fase: 'fase-a' | 'fase-b' | 'fase-c';
   parentName: string;
   parentPhone: string;
+  tanggalLahir?: string;
+  alamat?: string;
   avatar?: string;
   wakeUpTime: string;
   bedTime: string;
   habits: Record<number, boolean>;
   prayers: PrayerTimesChecklist;
   notes?: string;
+}
+
+export interface RombelRecord {
+  id: string;
+  name: string; // 'Kelas IV-A'
+  fase: 'fase-a' | 'fase-b' | 'fase-c';
+  waliKelasId: string | null; // TeacherRecord.id
 }
 
 export interface TeacherRecord {

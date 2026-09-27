@@ -6,9 +6,10 @@ import { SchoolLogo } from '../components/SchoolLogo';
 
 interface LandingPageViewProps {
   onNavigate: (screen: ScreenId) => void;
+  principalPhotoUrl?: string;
 }
 
-export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) => {
+export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate, principalPhotoUrl }) => {
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col">
       {/* Top Navigation Bar — Reusable Public Navbar */}
@@ -146,7 +147,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
                     <img
                       alt="Ibu Fahmawati, S.Pd."
                       className="w-full h-full object-cover"
-                      src={APP_ASSETS.principalPhoto}
+                      src={principalPhotoUrl || APP_ASSETS.principalPhoto}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-transparent to-transparent"></div>
                     <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
@@ -177,8 +178,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
                   </div>
                 </div>
 
-                <div className="absolute -bottom-4 -left-4 bg-white p-3 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3 hidden sm:flex">
-                  <div className="w-10 h-10 rounded-lg bg-[#006947]/10 flex items-center justify-center text-[#006947]">
+                <div className="mt-4 bg-white p-3 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#006947]/10 flex items-center justify-center text-[#006947] shrink-0">
                     <span className="material-symbols-outlined text-xl">verified</span>
                   </div>
                   <div>
@@ -450,28 +451,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
                 </div>
               ))}
             </div>
-
-            <div className="mt-8 p-6 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#00685f]/10 flex items-center justify-center text-[#00685f] shrink-0">
-                  <span className="material-symbols-outlined text-2xl">touch_app</span>
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">Bagaimana Orang Tua Memverifikasi?</h4>
-                  <p className="text-xs text-slate-600">
-                    Hanya butuh 60 detik setiap petang. Cukup klik centang 7 ikon habit harian di web SIPAKAINGE via HP
-                    tanpa instalasi aplikasi berat.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => onNavigate('parent_calendar')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] text-[#00685f] text-xs font-semibold transition-colors shrink-0"
-              >
-                <span>Buka Kalender Pembiasaan</span>
-                <span className="material-symbols-outlined text-sm">chevron_right</span>
-              </button>
-            </div>
           </div>
         </section>
 
@@ -566,8 +545,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
                   </div>
                   <h3 className="text-lg font-bold text-[#0b1c30] mb-2">Pasca-Observasi & Refleksi</h3>
                   <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Guru diajak menemukan solusinya sendiri melalui dialog reflektif, menyusun rencana aksi peningkatan,
-                    serta mengunggah tindak lanjut ke portofolio.
+                    Guru diajak menemukan solusinya sendiri melalui dialog reflektif dan menyusun rencana aksi
+                    peningkatan berbasis hasil supervisi.
                   </p>
                   <div className="p-3 rounded-lg bg-white border border-slate-100 text-xs text-slate-700">
                     <div className="flex items-center gap-1.5 text-[#00685f] font-semibold mb-1">
@@ -579,7 +558,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/50 flex items-center gap-1.5 text-[#006947] text-xs font-semibold">
                   <span className="material-symbols-outlined text-sm">done_all</span>
-                  <span>Rencana Tindak Lanjut Berkelanjutan</span>
+                  <span>Laporan Hasil Supervisi Berkelanjutan</span>
                 </div>
               </div>
             </div>
@@ -723,13 +702,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
               >
                 <span className="material-symbols-outlined text-[20px]">login</span>
                 <span>Akses Portal SIPAKAINGE Sekarang</span>
-              </button>
-              <button
-                onClick={() => onNavigate('supervision_dashboard')}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-all shadow-sm border border-slate-200"
-              >
-                <span className="material-symbols-outlined text-[#00685f] text-[20px]">download</span>
-                <span>Unduh Buku Panduan Supervisi (PDF)</span>
               </button>
             </div>
             <div className="mt-8 flex items-center gap-4 text-slate-500 text-xs">

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ScreenId, MuridRecord, PrayerTimesChecklist, UserRole } from '../types';
-import { APP_ASSETS, INITIAL_MURID, HABIT_LIST } from '../data/mockData';
+import { INITIAL_MURID, HABIT_LIST } from '../data/mockData';
+
+type WorkspaceTab = 'habits' | 'academics' | 'portfolios' | 'awards' | 'attendance';
 
 interface ClassHabitsInputViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -8,13 +10,25 @@ interface ClassHabitsInputViewProps {
   userRole?: UserRole;
   onUpdateMuridHabits?: (muridId: string, updated: Partial<MuridRecord>) => void;
   onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
+  /** When set, the view opens directly on this workspace tab and hides the tab switcher,
+   * so it behaves as a standalone page reached from its own sidebar menu. */
+  lockedTab?: WorkspaceTab;
 }
+
+const TAB_META: Record<WorkspaceTab, { breadcrumb: string; title: string }> = {
+  habits: { breadcrumb: 'Isian & Verifikasi 7 KAIH', title: 'Isian & Pemantauan 7 KAIH' },
+  academics: { breadcrumb: 'Input Nilai Akademik Mapel', title: 'Input Nilai Akademik Mapel' },
+  portfolios: { breadcrumb: 'Karya & Portofolio Murid', title: 'Karya & Portofolio Murid' },
+  awards: { breadcrumb: 'Prestasi & Apresiasi Murid', title: 'Prestasi & Apresiasi Murid' },
+  attendance: { breadcrumb: 'Presensi Murid', title: 'Presensi Murid' },
+};
 
 export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   onNavigate,
   muridList: propMuridList,
   userRole = 'guru',
   onUpdateMuridList,
+  lockedTab,
 }) => {
   // Current active teacher is Ibu Siti Aminah (Wali Kelas IV-A)
   const currentTeacher = {
@@ -22,7 +36,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     nip: '19840212 200801 2 018',
     assignedClass: 'Kelas IV-A',
     fase: 'Fase B',
-    avatar: APP_ASSETS.sitiAminahAvatar,
   };
 
   const [muridData, setMuridData] = useState<MuridRecord[]>(propMuridList || INITIAL_MURID);
@@ -37,7 +50,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   const [guruNote, setGuruNote] = useState<string>(
     'Ananda sangat disiplin mengikuti sholat dhuha berjamaah dan aktif membaca buku cerita di pojok baca kelas.'
   );
-  const [isValidatedByGuru, setIsValidatedByGuru] = useState<boolean>(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -45,8 +57,13 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Active Workspace tab: habits, academics, portfolios, awards
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'habits' | 'academics' | 'portfolios' | 'awards'>('habits');
+  // Active Workspace tab: habits, academics, portfolios, awards, attendance
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<WorkspaceTab>(lockedTab || 'habits');
+  const currentTabMeta = TAB_META[lockedTab || 'habits'];
+
+  // New attendance states
+  const [attendanceStatus, setAttendanceStatus] = useState<'Hadir' | 'Sakit' | 'Izin' | 'Alpa'>('Hadir');
+  const [attendanceNote, setAttendanceNote] = useState<string>('');
 
   // New academic grade states
   const [selectedAcademicSubject, setSelectedAcademicSubject] = useState<string>('Ilmu Pengetahuan Alam & Sosial');
@@ -205,6 +222,41 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     showToast(`✓ Prestasi & apresiasi berhasil ditambahkan untuk ${activeMurid.name}!`);
   };
 
+  const handleSaveAttendance = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeMurid) {
+      showToast('Silakan pilih murid terlebih dahulu!');
+      return;
+    }
+
+    const newAttendance = {
+      id: `att-${Date.now()}`,
+      date: selectedDate,
+      status: attendanceStatus,
+      note: attendanceNote,
+    };
+
+    const updater = (prevList: MuridRecord[]) => {
+      return prevList.map((m) => {
+        if (m.id === activeMurid.id) {
+          const currentAttendance = (m as any).attendance || [];
+          return {
+            ...m,
+            attendance: [newAttendance, ...currentAttendance],
+          };
+        }
+        return m;
+      });
+    };
+
+    setMuridData(updater);
+    if (onUpdateMuridList) {
+      onUpdateMuridList(updater);
+    }
+    setAttendanceNote('');
+    showToast(`✓ Presensi ${activeMurid.name} berhasil dicatat: ${attendanceStatus}!`);
+  };
+
   // If role is guru, strictly filter to the assigned class set by Kepala Sekolah (Kelas IV-A)
   const availableClasses = ['Semua Kelas', 'Kelas IV-A', 'Kelas V-B', 'Kelas III-A', 'Kelas I-B', 'Kelas VI-C'];
 
@@ -224,9 +276,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
       m.nis.includes(searchFilter)
   );
 
-  const activeMurid = selectedMuridId 
+  const activeMurid = selectedMuridId
     ? displayMuridList.find((m) => m.id === selectedMuridId)
     : (userRole === 'kepala_sekolah' ? undefined : displayMuridList[0] || muridData[0]);
+
+  const isHomeHabitsValidated = !!(activeMurid as any)?.homeHabitsValidated;
 
   // Handler for Guru School Prayers (Dhuha & Dhuhur)
   const handleTogglePrayer = (muridId: string, pKey: keyof PrayerTimesChecklist) => {
@@ -249,8 +303,31 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
 
   const handleValidateHomeHabits = () => {
     if (!activeMurid) return;
-    setIsValidatedByGuru(true);
-    showToast(`✓ Pembiasaan Rumah ${activeMurid.name} berhasil divalidasi oleh Wali Kelas!`);
+    const alreadyValidated = !!(activeMurid as any).homeHabitsValidated;
+
+    const updater = (prevList: MuridRecord[]) => {
+      return prevList.map((m) => {
+        if (m.id === activeMurid.id) {
+          return {
+            ...m,
+            homeHabitsValidated: !alreadyValidated,
+            homeHabitsValidatedAt: !alreadyValidated ? selectedDate : undefined,
+          };
+        }
+        return m;
+      });
+    };
+
+    setMuridData(updater);
+    if (onUpdateMuridList) {
+      onUpdateMuridList(updater);
+    }
+
+    showToast(
+      alreadyValidated
+        ? `Validasi Pembiasaan Rumah ${activeMurid.name} dibatalkan.`
+        : `✓ Pembiasaan Rumah ${activeMurid.name} berhasil divalidasi & tersimpan oleh Wali Kelas!`
+    );
   };
 
   const handleSaveGuruNotes = () => {
@@ -285,7 +362,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
             </span>
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-teal-800">
-              Isian & Verifikasi 7 KAIH
+              {currentTabMeta.breadcrumb}
             </span>
           </div>
 
@@ -309,22 +386,30 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg font-bold">
-                    {userRole === 'kepala_sekolah'
-                      ? 'Pemantauan 7 KAIH Seluruh Kelas (Kepala Sekolah)'
-                      : `Isian & Pemantauan 7 KAIH (${currentTeacher.assignedClass})`}
+                    {!lockedTab || lockedTab === 'habits'
+                      ? userRole === 'kepala_sekolah'
+                        ? 'Pemantauan 7 KAIH Seluruh Kelas (Kepala Sekolah)'
+                        : `Isian & Pemantauan 7 KAIH (${currentTeacher.assignedClass})`
+                      : `${currentTabMeta.title} (${userRole === 'kepala_sekolah' ? 'Seluruh Kelas' : currentTeacher.assignedClass})`}
                   </h1>
                   <span className="rounded-full bg-[#6ffbbe]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#6ffbbe] border border-[#6ffbbe]/30">
                     {userRole === 'kepala_sekolah' ? 'Super Admin' : 'Wali Kelas Resmi'}
                   </span>
                 </div>
                 <p className="text-xs text-teal-100/90 mt-1 max-w-2xl leading-relaxed">
-                  {userRole === 'guru' ? (
-                    <>
-                      Sebagai <strong>Wali Kelas {currentTeacher.assignedClass}</strong>, Anda berwenang mengisi ibadah jam sekolah (<strong>Shalat Dhuha & Dhuhur</strong>) serta memvalidasi pembiasaan rumah yang dilaporkan oleh orang tua murid.
-                    </>
+                  {!lockedTab || lockedTab === 'habits' ? (
+                    userRole === 'guru' ? (
+                      <>
+                        Sebagai <strong>Wali Kelas {currentTeacher.assignedClass}</strong>, Anda berwenang mengisi ibadah jam sekolah (<strong>Shalat Dhuha & Dhuhur</strong>) serta memvalidasi pembiasaan rumah yang dilaporkan oleh orang tua murid.
+                      </>
+                    ) : (
+                      <>
+                        Kepala Sekolah memiliki wewenang memantau seluruh kelas, mengawasi keterisian jurnal harian 7 KAIH murid, dan memastikan verifikasi wali kelas berjalan tertib.
+                      </>
+                    )
                   ) : (
                     <>
-                      Kepala Sekolah memiliki wewenang memantau seluruh kelas, mengawasi keterisian jurnal harian 7 KAIH murid, dan memastikan verifikasi wali kelas berjalan tertib.
+                      Pilih kelas dan murid terlebih dahulu, lalu catat <strong>{currentTabMeta.title.toLowerCase()}</strong> untuk murid tersebut.
                     </>
                   )}
                 </p>
@@ -436,8 +521,13 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                           className="h-10 w-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-800 font-bold text-xs shrink-0">
-                          {murid.gender === 'L' ? '👦' : '👧'}
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shrink-0">
+                          <span
+                            className="material-symbols-outlined text-lg"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                          >
+                            {murid.gender === 'L' ? 'boy' : 'girl'}
+                          </span>
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
@@ -506,8 +596,13 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                     className="h-14 w-14 rounded-2xl object-cover ring-2 ring-teal-600/30 shrink-0"
                   />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-teal-800 font-bold text-xl shrink-0">
-                    {activeMurid.gender === 'L' ? '👦' : '👧'}
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shrink-0">
+                    <span
+                      className="material-symbols-outlined text-2xl"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      {activeMurid.gender === 'L' ? 'boy' : 'girl'}
+                    </span>
                   </div>
                 )}
                 <div>
@@ -526,6 +621,18 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                     <span>NIS: <strong>{activeMurid.nis}</strong></span>
                     <span>•</span>
                     <span>Orang Tua/Wali: <strong>{activeMurid.parentName}</strong> ({activeMurid.parentPhone})</span>
+                    {activeMurid.tanggalLahir && (
+                      <>
+                        <span>•</span>
+                        <span>Tanggal Lahir: <strong>{activeMurid.tanggalLahir}</strong></span>
+                      </>
+                    )}
+                    {activeMurid.alamat && (
+                      <>
+                        <span>•</span>
+                        <span>Alamat: <strong>{activeMurid.alamat}</strong></span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -549,7 +656,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
         )}
 
         {/* Workspace Tab Bar */}
-        {activeMurid && (
+        {activeMurid && !lockedTab && (
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-1">
             <button
               onClick={() => setActiveWorkspaceTab('habits')}
@@ -742,8 +849,14 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
             </div>
 
             {/* BAGIAN B: WEWENANG ORANG TUA DI RUMAH */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            <div
+              className={`rounded-2xl border p-5 space-y-4 transition-colors ${
+                isHomeHabitsValidated
+                  ? 'border-emerald-300 bg-emerald-50/40'
+                  : 'border-amber-300 bg-amber-50/40'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-slate-700 text-xl">home</span>
                   <div>
@@ -751,23 +864,48 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                       B. Wewenang Pengisian Orang Tua Murid (Pembiasaan di Rumah)
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Diisi oleh orang tua melalui akun Portal Orang Tua. Guru berperan memantau & memvalidasi.
+                      Diisi oleh orang tua melalui akun Portal Orang Tua. Data pembiasaan rumah baru dianggap
+                      tersimpan resmi setelah divalidasi oleh Wali Kelas.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full font-bold">
-                    Sinkronisasi Rumah
-                  </span>
+                  {isHomeHabitsValidated ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">verified</span>
+                      Tervalidasi & Tersimpan
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">hourglass_top</span>
+                      Menunggu Validasi
+                    </span>
+                  )}
                   <button
                     onClick={handleValidateHomeHabits}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-bold transition shadow-xs ${
+                      isHomeHabitsValidated
+                        ? 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
                   >
-                    <span className="material-symbols-outlined text-sm">done_all</span>
-                    <span>Validasi Wali Kelas</span>
+                    <span className="material-symbols-outlined text-sm">
+                      {isHomeHabitsValidated ? 'undo' : 'done_all'}
+                    </span>
+                    <span>{isHomeHabitsValidated ? 'Batalkan Validasi' : 'Validasi & Simpan (Wali Kelas)'}</span>
                   </button>
                 </div>
               </div>
+
+              {!isHomeHabitsValidated && (
+                <div className="rounded-xl bg-white/70 border border-dashed border-amber-300 px-3 py-2 text-[11px] text-amber-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">info</span>
+                  <span>
+                    Data di bawah ini masih berupa laporan orang tua dan <strong>belum tersimpan resmi</strong>.
+                    Klik tombol "Validasi & Simpan" setelah memeriksa kebenarannya.
+                  </span>
+                </div>
+              )}
 
               {/* Rincian Status Pembiasaan Rumah */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1159,6 +1297,106 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
                         <p className="text-[10px] text-slate-400">{aw.date || 'September 2026'}</p>
                         <p className="text-xs text-slate-600 pt-1">{aw.description}</p>
                       </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeMurid && activeWorkspaceTab === 'attendance' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Input Form */}
+            <div className="lg:col-span-5 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-teal-700">fact_check</span>
+                Catat Presensi Murid
+              </h3>
+              <form onSubmit={handleSaveAttendance} className="space-y-4 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tanggal:</label>
+                  <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-600">
+                    {selectedDate}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Status Kehadiran:</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['Hadir', 'Sakit', 'Izin', 'Alpa'] as const).map((status) => (
+                      <button
+                        type="button"
+                        key={status}
+                        onClick={() => setAttendanceStatus(status)}
+                        className={`py-2 rounded-xl text-[11px] font-bold border transition ${
+                          attendanceStatus === status
+                            ? 'bg-teal-800 text-white border-teal-800'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Keterangan (Opsional):</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Contoh: Izin acara keluarga, Sakit demam sejak pagi"
+                    value={attendanceNote}
+                    onChange={(e) => setAttendanceNote(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600 resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span>Simpan Presensi</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Right: Attendance History */}
+            <div className="lg:col-span-7 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                <span>Riwayat Presensi: {activeMurid.name}</span>
+                <span className="rounded-full bg-teal-50 text-teal-800 px-3 py-1 text-xs font-bold">Aktif • Real-time</span>
+              </h3>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {(() => {
+                  const attendanceList = (activeMurid as any).attendance || [];
+
+                  if (attendanceList.length === 0) {
+                    return (
+                      <div className="text-center p-8 border border-dashed border-slate-100 bg-slate-50/50 rounded-2xl text-slate-400 italic text-xs">
+                        Belum ada rekam presensi yang tercatat untuk siswa ini. Silakan catat presensi hari ini di form sebelah kiri.
+                      </div>
+                    );
+                  }
+
+                  const statusColor: Record<string, string> = {
+                    Hadir: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                    Sakit: 'bg-amber-100 text-amber-800 border-amber-200',
+                    Izin: 'bg-blue-100 text-blue-800 border-blue-200',
+                    Alpa: 'bg-red-100 text-red-800 border-red-200',
+                  };
+
+                  return attendanceList.map((att: any) => (
+                    <div key={att.id} className="rounded-2xl p-4 border border-slate-100 bg-slate-50/40 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800">{att.date}</p>
+                        {att.note && <p className="text-[11px] text-slate-500 mt-0.5">{att.note}</p>}
+                      </div>
+                      <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusColor[att.status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                        {att.status}
+                      </span>
                     </div>
                   ));
                 })()}

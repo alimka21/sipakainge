@@ -7,6 +7,8 @@ interface ParentDashboardViewProps {
   onOpenQuickRecord: () => void;
   userRole?: string;
   muridList?: MuridRecord[];
+  principalPhotoUrl?: string;
+  parentMuridId?: string;
 }
 
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
@@ -14,8 +16,13 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   onOpenQuickRecord,
   userRole = 'orang_tua',
   muridList = INITIAL_MURID,
+  principalPhotoUrl,
+  parentMuridId,
 }) => {
-  const [selectedMuridId, setSelectedMuridId] = useState<string>('');
+  const isOrangTua = userRole === 'orang_tua';
+  const [selectedMuridId, setSelectedMuridId] = useState<string>(
+    isOrangTua ? parentMuridId || 'm-4a-1' : ''
+  );
 
   const isKS = userRole === 'kepala_sekolah';
 
@@ -28,57 +35,61 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   return (
     <div className="w-full pb-16 font-['Plus_Jakarta_Sans',sans-serif] px-6 lg:px-10 py-6 space-y-6">
-      {/* SECTION 1: Student Selection (Mandatory First) */}
-      <section className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center font-bold">
-            <span className="material-symbols-outlined">person_search</span>
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900">
-              Langkah 1: Pilih Peserta Didik / Siswa
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Silakan pilih nama siswa terlebih dahulu untuk menampilkan data Buku Pantau Karakter 7 KAIH secara terperinci.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700">Pilih Siswa / Ananda:</label>
-            <select
-              value={selectedMuridId}
-              onChange={(e) => setSelectedMuridId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
-            >
-              <option value="">-- Silakan Pilih Siswa --</option>
-              {muridList.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.rombel} • NISN: {m.nisn})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {activeMurid && (
-            <div className="rounded-2xl bg-teal-50/50 p-3.5 border border-teal-100 flex items-center justify-between gap-4 animate-scale-up">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-800 font-bold text-sm shrink-0">
-                  {activeMurid.gender === 'L' ? '👦' : '👧'}
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">{activeMurid.name}</p>
-                  <p className="text-[10px] text-slate-500">Orang Tua: {activeMurid.parentName}</p>
-                </div>
-              </div>
-              <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-bold text-teal-800 shrink-0">
-                {activeMurid.rombel}
-              </span>
+      {/* SECTION 1: Student Selection (Kepala Sekolah / Guru monitor multiple students) */}
+      {!isOrangTua && (
+        <section className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center font-bold">
+              <span className="material-symbols-outlined">person_search</span>
             </div>
-          )}
-        </div>
-      </section>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                Langkah 1: Pilih Peserta Didik / Siswa
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Silakan pilih nama siswa terlebih dahulu untuk menampilkan data Buku Pantau Karakter 7 KAIH secara terperinci.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">Pilih Siswa / Ananda:</label>
+              <select
+                value={selectedMuridId}
+                onChange={(e) => setSelectedMuridId(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
+              >
+                <option value="">-- Silakan Pilih Siswa --</option>
+                {muridList.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.rombel} • NISN: {m.nisn})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {activeMurid && (
+              <div className="rounded-2xl bg-teal-50/50 p-3.5 border border-teal-100 flex items-center justify-between gap-4 animate-scale-up">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shrink-0">
+                    <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {activeMurid.gender === 'L' ? 'boy' : 'girl'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-slate-900">{activeMurid.name}</p>
+                    <p className="text-[10px] text-slate-500">Orang Tua: {activeMurid.parentName}</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-bold text-teal-800 shrink-0">
+                  {activeMurid.rombel}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Conditional rendering depending on whether a student is selected */}
       {!activeMurid ? (
@@ -100,11 +111,19 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               {/* Left: Identity & Greeting */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 max-w-2xl">
                 <div className="relative shrink-0">
-                  <img
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-white/20"
-                    alt={isKS ? "Ibu Fahmawati, S.Pd." : "Wali Murid"}
-                    src={isKS ? APP_ASSETS.principalPhoto : APP_ASSETS.motherAvatar}
-                  />
+                  {isKS ? (
+                    <img
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-white/20"
+                      alt="Ibu Fahmawati, S.Pd."
+                      src={principalPhotoUrl || APP_ASSETS.principalPhoto}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/15 text-white flex items-center justify-center shadow-md ring-4 ring-white/20">
+                      <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        woman
+                      </span>
+                    </div>
+                  )}
                   <span
                     className="absolute bottom-0 right-0 w-6 h-6 bg-[#6ffbbe] text-[#002113] rounded-full flex items-center justify-center shadow-xs"
                     title={isKS ? "Manajemen Mutu Sekolah" : "Kemitraan Rumah Aktif"}

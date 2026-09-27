@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, TeacherRecord, MuridRecord } from '../types';
+import { ScreenId, TeacherRecord, MuridRecord, UserRole } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
 import {
   getCurrentSupabaseConfig,
@@ -14,6 +14,9 @@ interface UserManagementViewProps {
   teachers?: TeacherRecord[];
   muridList?: MuridRecord[];
   onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
+  userRole?: UserRole;
+  principalPhotoUrl?: string;
+  onUpdatePrincipalPhoto?: (url: string) => void;
 }
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
@@ -21,8 +24,33 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   teachers: initialTeachersProp,
   muridList: initialMuridProp,
   onUpdateMuridList,
+  userRole = 'kepala_sekolah',
+  principalPhotoUrl,
+  onUpdatePrincipalPhoto,
 }) => {
-  const [activeTab, setActiveTab] = useState<'guru' | 'murid' | 'database'>('guru');
+  const [activeTab, setActiveTab] = useState<'guru' | 'murid' | 'database' | 'profil'>('guru');
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePhoto = () => {
+    if (!photoPreview) {
+      showToast('Pilih foto terlebih dahulu!');
+      return;
+    }
+    if (onUpdatePrincipalPhoto) {
+      onUpdatePrincipalPhoto(photoPreview);
+    }
+    showToast('✓ Foto profil Kepala Sekolah berhasil diperbarui!');
+  };
 
   // CSV Import States
   const [isImportGuruOpen, setIsImportGuruOpen] = useState(false);
@@ -129,6 +157,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     fase: 'fase-b' as 'fase-a' | 'fase-b' | 'fase-c',
     parentName: '',
     parentPhone: '',
+    tanggalLahir: '',
+    alamat: '',
   });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -267,6 +297,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                 fase: muridForm.fase,
                 parentName: muridForm.parentName || m.parentName,
                 parentPhone: muridForm.parentPhone || m.parentPhone,
+                tanggalLahir: muridForm.tanggalLahir || m.tanggalLahir,
+                alamat: muridForm.alamat || m.alamat,
               }
             : m
         )
@@ -284,6 +316,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         fase: muridForm.fase,
         parentName: muridForm.parentName || 'Orang Tua Murid',
         parentPhone: muridForm.parentPhone || '0812-xxxx-xxxx',
+        tanggalLahir: muridForm.tanggalLahir || undefined,
+        alamat: muridForm.alamat || undefined,
         wakeUpTime: '05:00',
         bedTime: '21:00',
         habits: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: false },
@@ -313,6 +347,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       fase: 'fase-b',
       parentName: '',
       parentPhone: '',
+      tanggalLahir: '',
+      alamat: '',
     });
   };
 
@@ -507,11 +543,17 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
         <div className="rounded-3xl bg-gradient-to-r from-teal-950 via-slate-900 to-indigo-950 p-6 sm:p-8 text-white shadow-xl">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <img
-                src={APP_ASSETS.principalAvatar}
-                alt="Kepala Sekolah"
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-teal-400/30"
-              />
+              {principalPhotoUrl ? (
+                <img
+                  src={principalPhotoUrl}
+                  alt="Kepala Sekolah"
+                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-teal-400/30"
+                />
+              ) : (
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/10 text-teal-200 flex items-center justify-center font-bold text-2xl ring-4 ring-teal-400/30">
+                  F
+                </div>
+              )}
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="rounded-full bg-teal-500/25 px-2.5 py-0.5 text-xs font-bold text-teal-300">
@@ -593,7 +635,66 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
               </span>
             )}
           </button>
+          {userRole === 'kepala_sekolah' && (
+            <button
+              onClick={() => setActiveTab('profil')}
+              className={`flex items-center gap-2 px-6 py-3 font-bold text-xs sm:text-sm border-b-2 transition-all shrink-0 ${
+                activeTab === 'profil'
+                  ? 'border-teal-700 text-teal-900 bg-white rounded-t-2xl shadow-xs'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-lg">account_circle</span>
+              <span>Profil & Foto Kepala Sekolah</span>
+            </button>
+          )}
         </div>
+
+        {/* ======================================================== */}
+        {/* TAB: PROFIL & GANTI FOTO KEPALA SEKOLAH */}
+        {/* ======================================================== */}
+        {activeTab === 'profil' && userRole === 'kepala_sekolah' && (
+          <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-5 max-w-xl">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-teal-700">photo_camera</span>
+              Ganti Foto Profil Kepala Sekolah
+            </h3>
+            <p className="text-xs text-slate-500">
+              Foto ini akan tampil di header aplikasi dan pada halaman depan (landing page) sekolah.
+            </p>
+
+            <div className="flex items-center gap-5">
+              <div className="h-20 w-20 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                {photoPreview || principalPhotoUrl ? (
+                  <img
+                    src={photoPreview || principalPhotoUrl}
+                    alt="Pratinjau Foto Kepala Sekolah"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="material-symbols-outlined text-3xl text-slate-400">person</span>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoFileChange}
+                  className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-800 hover:file:bg-teal-100"
+                />
+                <button
+                  onClick={handleSavePhoto}
+                  disabled={!photoPreview}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  Simpan Foto
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ======================================================== */}
         {/* TAB 1: MANAJEMEN GURU */}
@@ -856,11 +957,17 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                     <tr className="bg-teal-50/40">
                       <td className="py-3.5 px-4 font-bold text-slate-900">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={APP_ASSETS.principalAvatar}
-                            alt="Kepala Sekolah"
-                            className="h-10 w-10 rounded-xl object-cover ring-2 ring-teal-600/30"
-                          />
+                          {principalPhotoUrl ? (
+                            <img
+                              src={principalPhotoUrl}
+                              alt="Kepala Sekolah"
+                              className="h-10 w-10 rounded-xl object-cover ring-2 ring-teal-600/30"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs ring-2 ring-teal-600/30 shrink-0">
+                              F
+                            </div>
+                          )}
                           <div>
                             <p className="font-bold text-slate-900">Fahmawati, S.Pd.</p>
                             <p className="text-[10px] text-slate-500">NIP. 197305111995012002</p>
@@ -1073,6 +1180,8 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                       fase: 'fase-b',
                       parentName: '',
                       parentPhone: '',
+                      tanggalLahir: '',
+                      alamat: '',
                     });
                     setIsAddMuridOpen(true);
                   }}
@@ -1251,8 +1360,13 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                                   className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-200"
                                 />
                               ) : (
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-800 font-bold text-xs">
-                                  {murid.gender === 'L' ? '👦' : '👧'}
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shrink-0">
+                                  <span
+                                    className="material-symbols-outlined text-base"
+                                    style={{ fontVariationSettings: "'FILL' 1" }}
+                                  >
+                                    {murid.gender === 'L' ? 'boy' : 'girl'}
+                                  </span>
                                 </div>
                               )}
                               <div>
@@ -1260,6 +1374,13 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                                 <p className="text-[10px] text-slate-500">
                                   NISN: {murid.nisn} • NIS: {murid.nis}
                                 </p>
+                                {(murid.tanggalLahir || murid.alamat) && (
+                                  <p className="text-[10px] text-slate-400">
+                                    {murid.tanggalLahir && <>Lahir: {murid.tanggalLahir}</>}
+                                    {murid.tanggalLahir && murid.alamat && ' • '}
+                                    {murid.alamat && <>{murid.alamat}</>}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -1319,6 +1440,8 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                                     fase: murid.fase,
                                     parentName: murid.parentName,
                                     parentPhone: murid.parentPhone,
+                                    tanggalLahir: murid.tanggalLahir || '',
+                                    alamat: murid.alamat || '',
                                   });
                                   setIsAddMuridOpen(true);
                                 }}
@@ -1830,6 +1953,28 @@ CREATE POLICY "Akses Tulis Supervisi" ON public.supervision_cycles FOR ALL USING
                   onChange={(e) => setMuridForm({ ...muridForm, parentPhone: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tanggal Lahir:</label>
+                  <input
+                    type="date"
+                    value={muridForm.tanggalLahir}
+                    onChange={(e) => setMuridForm({ ...muridForm, tanggalLahir: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Alamat:</label>
+                  <input
+                    type="text"
+                    placeholder="Jl. Perintis Kemerdekaan No. 10, Makassar"
+                    value={muridForm.alamat}
+                    onChange={(e) => setMuridForm({ ...muridForm, alamat: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">

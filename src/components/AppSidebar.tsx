@@ -84,7 +84,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           {/* A. MENU KEPALA SEKOLAH (SUPER ADMIN)                     */}
           {/* ======================================================== */}
           {userRole === 'kepala_sekolah' && (
-            <div>
+            <div className="space-y-4">
+              <div>
               {!isCollapsed && (
                 <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                   Ruang Kerja Kepala Sekolah
@@ -125,6 +126,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       </span>
                     </div>
                   )}
+                </button>
+
+                {/* 2b. Manajemen Kelas / Rombel */}
+                <button
+                  onClick={() => onNavigate('class_management')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                    currentScreen === 'class_management'
+                      ? 'bg-purple-700 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title="Manajemen Kelas / Rombel & Wali Kelas"
+                >
+                  <span className="material-symbols-outlined text-lg shrink-0">apartment</span>
+                  {!isCollapsed && <span>Manajemen Kelas</span>}
                 </button>
 
                 {/* 3. Pantau Isian 7 KAIH Per Kelas */}
@@ -206,6 +221,74 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   {!isCollapsed && <span>Portofolio & Profil Murid</span>}
                 </button>
               </div>
+              </div>
+
+              {/* Bagian: Data Individu Murid (Sidebar Khusus) */}
+              <div className="pt-2 border-t border-slate-100">
+                {!isCollapsed && (
+                  <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Data Individu Murid
+                  </p>
+                )}
+
+                <div className="space-y-1">
+                  {/* Presensi Murid */}
+                  <button
+                    onClick={() => onNavigate('attendance_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'attendance_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Presensi Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">event_available</span>
+                    {!isCollapsed && <span>Presensi Murid</span>}
+                  </button>
+
+                  {/* Input Nilai Akademik Mapel */}
+                  <button
+                    onClick={() => onNavigate('academic_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'academic_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Input Nilai Akademik Mapel"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">auto_stories</span>
+                    {!isCollapsed && <span>Nilai Akademik Mapel</span>}
+                  </button>
+
+                  {/* Karya & Portofolio Murid */}
+                  <button
+                    onClick={() => onNavigate('portfolio_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'portfolio_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Karya & Portofolio Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">photo_library</span>
+                    {!isCollapsed && <span>Karya & Portofolio Murid</span>}
+                  </button>
+
+                  {/* Prestasi & Apresiasi Murid */}
+                  <button
+                    onClick={() => onNavigate('award_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'award_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Prestasi & Apresiasi Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">stars</span>
+                    {!isCollapsed && <span>Prestasi & Apresiasi Murid</span>}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -284,6 +367,73 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   >
                     <span className="material-symbols-outlined text-lg shrink-0">badge</span>
                     {!isCollapsed && <span>Portofolio & Profil Murid</span>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Bagian: Data Individu Murid (Sidebar Khusus) */}
+              <div className="pt-2 border-t border-slate-100">
+                {!isCollapsed && (
+                  <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Data Individu Murid
+                  </p>
+                )}
+
+                <div className="space-y-1">
+                  {/* Presensi Murid */}
+                  <button
+                    onClick={() => onNavigate('attendance_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'attendance_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Presensi Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">event_available</span>
+                    {!isCollapsed && <span>Presensi Murid</span>}
+                  </button>
+
+                  {/* Input Nilai Akademik Mapel */}
+                  <button
+                    onClick={() => onNavigate('academic_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'academic_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Input Nilai Akademik Mapel"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">auto_stories</span>
+                    {!isCollapsed && <span>Nilai Akademik Mapel</span>}
+                  </button>
+
+                  {/* Karya & Portofolio Murid */}
+                  <button
+                    onClick={() => onNavigate('portfolio_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'portfolio_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Karya & Portofolio Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">photo_library</span>
+                    {!isCollapsed && <span>Karya & Portofolio Murid</span>}
+                  </button>
+
+                  {/* Prestasi & Apresiasi Murid */}
+                  <button
+                    onClick={() => onNavigate('award_input')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                      currentScreen === 'award_input'
+                        ? 'bg-[#00685f] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    title="Prestasi & Apresiasi Murid"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">stars</span>
+                    {!isCollapsed && <span>Prestasi & Apresiasi Murid</span>}
                   </button>
                 </div>
               </div>

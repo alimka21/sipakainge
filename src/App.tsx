@@ -8,7 +8,7 @@ import { ScreenId, UserRole, SupervisionSession, SupervisionStatus } from './typ
 import { AppHeader } from './components/AppHeader';
 import { AppSidebar } from './components/AppSidebar';
 import { BeritaAcaraModal, QuickRecordModal } from './components/Modals';
-import { INITIAL_TEACHERS, INITIAL_MURID } from './data/mockData';
+import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS } from './data/mockData';
 
 // Views
 import { LandingPageView } from './views/LandingPageView';
@@ -18,8 +18,9 @@ import { TeacherSupervisionDashboardView } from './views/TeacherSupervisionDashb
 import { StudentProgressDashboardView } from './views/StudentProgressDashboardView';
 import { UserManagementView } from './views/UserManagementView';
 import { ClassHabitsInputView } from './views/ClassHabitsInputView';
+import { ClassManagementView } from './views/ClassManagementView';
 import { ObservationFormView } from './views/ObservationFormView';
-import { FollowUpPlanView } from './views/FollowUpPlanView';
+import { TeacherSupervisionReportView } from './views/TeacherSupervisionReportView';
 import { ParentDashboardView } from './views/ParentDashboardView';
 import { ParentCalendarView } from './views/ParentCalendarView';
 import { ParentPortfolioView } from './views/ParentPortfolioView';
@@ -36,6 +37,9 @@ export default function App() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('t-1');
   const [muridList, setMuridList] = useState(INITIAL_MURID);
   const [teachersList, setTeachersList] = useState(INITIAL_TEACHERS);
+  const [rombelList, setRombelList] = useState(INITIAL_ROMBEL);
+  const [principalPhoto, setPrincipalPhoto] = useState<string>(APP_ASSETS.principalPhoto);
+  const [parentMuridId, setParentMuridId] = useState<string>('m-4a-1');
 
   // Lifted global supervision workflow states mapped to Teacher IDs
   const [sessionStates, setSessionStates] = useState<Record<string, SupervisionSession>>({
@@ -241,7 +245,7 @@ export default function App() {
       if (
         currentScreen !== 'teacher_dashboard' &&
         currentScreen !== 'observation_form' &&
-        currentScreen !== 'follow_up_plan'
+        currentScreen !== 'teacher_report'
       ) {
         setCurrentScreen('teacher_dashboard');
       }
@@ -288,7 +292,7 @@ export default function App() {
         // Dedicated Public Standalone Views (No private sidebar)
         <div>
           {currentScreen === 'landing' && (
-            <LandingPageView onNavigate={handleNavigate} />
+            <LandingPageView onNavigate={handleNavigate} principalPhotoUrl={principalPhoto} />
           )}
           {currentScreen === 'student_dashboard' && (
             <StudentProgressDashboardView
@@ -300,15 +304,20 @@ export default function App() {
             <TeacherSupervisionDashboardView
               onNavigate={handleNavigate}
               onOpenObservationForm={() => handleNavigate('observation_form')}
-              onOpenFollowUp={() => handleNavigate('follow_up_plan')}
+              onOpenReport={() => handleNavigate('teacher_report')}
               sessionStates={sessionStates}
             />
           )}
           {currentScreen === 'login' && (
             <LoginPortalView
-              onLogin={(role) => {
+              onLogin={(role, identifier) => {
                 setUserRole(role);
                 if (role === 'orang_tua') {
+                  const nisnMatch = identifier.match(/\d+/);
+                  const foundMurid = nisnMatch
+                    ? muridList.find((m) => m.nisn === nisnMatch[0])
+                    : undefined;
+                  setParentMuridId(foundMurid?.id || 'm-4a-1');
                   handleNavigate('parent_dashboard');
                 } else if (role === 'guru') {
                   handleNavigate('class_habits_input');
@@ -348,6 +357,7 @@ export default function App() {
               onSearchChange={setSearchQuery}
               isSidebarCollapsed={isSidebarCollapsed}
               onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              principalPhotoUrl={principalPhoto}
             />
 
             {/* Screen Router for Private Workspaces */}
@@ -375,6 +385,20 @@ export default function App() {
                   onNavigate={handleNavigate}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  userRole={userRole}
+                  principalPhotoUrl={principalPhoto}
+                  onUpdatePrincipalPhoto={setPrincipalPhoto}
+                />
+              )}
+
+              {/* 2a-1. Manajemen Kelas / Rombel (Kepala Sekolah) */}
+              {currentScreen === 'class_management' && (
+                <ClassManagementView
+                  onNavigate={handleNavigate}
+                  rombelList={rombelList}
+                  onUpdateRombelList={setRombelList}
+                  teacherList={teachersList}
+                  muridList={muridList}
                 />
               )}
 
@@ -385,6 +409,51 @@ export default function App() {
                   userRole={userRole}
                   muridList={muridList}
                   onUpdateMuridList={setMuridList}
+                  lockedTab="habits"
+                />
+              )}
+
+              {/* 2b-1. Input Nilai Akademik Mapel (Sidebar Khusus) */}
+              {currentScreen === 'academic_input' && (
+                <ClassHabitsInputView
+                  onNavigate={handleNavigate}
+                  userRole={userRole}
+                  muridList={muridList}
+                  onUpdateMuridList={setMuridList}
+                  lockedTab="academics"
+                />
+              )}
+
+              {/* 2b-2. Karya & Portofolio Murid (Sidebar Khusus) */}
+              {currentScreen === 'portfolio_input' && (
+                <ClassHabitsInputView
+                  onNavigate={handleNavigate}
+                  userRole={userRole}
+                  muridList={muridList}
+                  onUpdateMuridList={setMuridList}
+                  lockedTab="portfolios"
+                />
+              )}
+
+              {/* 2b-3. Prestasi & Apresiasi Murid (Sidebar Khusus) */}
+              {currentScreen === 'award_input' && (
+                <ClassHabitsInputView
+                  onNavigate={handleNavigate}
+                  userRole={userRole}
+                  muridList={muridList}
+                  onUpdateMuridList={setMuridList}
+                  lockedTab="awards"
+                />
+              )}
+
+              {/* 2b-4. Presensi Murid (Sidebar Khusus) */}
+              {currentScreen === 'attendance_input' && (
+                <ClassHabitsInputView
+                  onNavigate={handleNavigate}
+                  userRole={userRole}
+                  muridList={muridList}
+                  onUpdateMuridList={setMuridList}
+                  lockedTab="attendance"
                 />
               )}
 
@@ -404,7 +473,7 @@ export default function App() {
                   onPreviewBeritaAcara={() => setIsBeritaAcaraOpen(true)}
                   onFinishObservation={() => {
                     showToast('Observasi berhasil diselesaikan & disimpan!');
-                    handleNavigate('follow_up_plan');
+                    handleNavigate('teacher_report');
                   }}
                   userRole={userRole}
                   sessionStates={sessionStates}
@@ -414,13 +483,12 @@ export default function App() {
                 />
               )}
 
-              {/* 4. Rencana Tindak Lanjut (RTL) */}
-              {currentScreen === 'follow_up_plan' && (
-                <FollowUpPlanView
+              {/* 4. Laporan Hasil Supervisi per Guru */}
+              {currentScreen === 'teacher_report' && (
+                <TeacherSupervisionReportView
                   onNavigate={handleNavigate}
-                  onDownloadReport={() => {
-                    showToast('Mengunduh Laporan Rencana Tindak Lanjut PDF...');
-                  }}
+                  teacherList={teachersList}
+                  sessionStates={sessionStates}
                   selectedTeacherId={selectedTeacherId}
                   onSelectTeacherId={setSelectedTeacherId}
                 />
@@ -433,6 +501,8 @@ export default function App() {
                   onOpenQuickRecord={() => setIsQuickRecordOpen(true)}
                   userRole={userRole}
                   muridList={muridList}
+                  principalPhotoUrl={principalPhoto}
+                  parentMuridId={parentMuridId}
                 />
               )}
 
@@ -442,6 +512,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   onOpenQuickRecord={() => setIsQuickRecordOpen(true)}
                   userRole={userRole}
+                  parentMuridId={parentMuridId}
                 />
               )}
 
@@ -454,6 +525,7 @@ export default function App() {
                   }}
                   userRole={userRole}
                   muridList={muridList}
+                  parentMuridId={parentMuridId}
                 />
               )}
             </main>
@@ -467,7 +539,7 @@ export default function App() {
         onClose={() => setIsBeritaAcaraOpen(false)}
         onConfirm={() => {
           showToast('Berita acara observasi berhasil ditandatangani secara digital!');
-          handleNavigate('follow_up_plan');
+          handleNavigate('teacher_report');
         }}
       />
 

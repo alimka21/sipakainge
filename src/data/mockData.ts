@@ -1,21 +1,10 @@
-import { TeacherRecord, HabitItem, DayHabitLog, MuridRecord } from '../types';
+import { TeacherRecord, HabitItem, DayHabitLog, MuridRecord, RombelRecord } from '../types';
 
 export const APP_ASSETS = {
   logo: '/school_logo.svg',
+  // Default principal photo shown until the Kepala Sekolah uploads their own via
+  // "Profil & Foto Kepala Sekolah" (UserManagementView.tsx) — see App.tsx `principalPhoto` state.
   principalPhoto: 'https://lh3.googleusercontent.com/aida/AEtjO1UklTfGWNtEP7y35w9SEC_qhPmM2GY6gi2KtZIVmMfgt3R0mDdRTuX3UF3NObWCnUOXAhdfhOTeOHa2RByRewhyy6x32XI5_ywK86fmCh-aSvfPYnqQpgc-Rb6NBZqm-5xP4WU4wp5hghAEEyFtNVemogihS69vXboewTsf4zKpCrjlGUPeC29RQCVdl4ysa0_CYeOb5LGzjZRMtFoL-Coc7IKM85Fuwuc-xTKyh4reYNrD4ApB9NtLt6A',
-  principalAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBjiJx7sf7-J9B2uubjtp0C4gR8AqCRuVAqqkiowxu9yH3cXch9zlk_3uUSRzzaZiAFLKDCrdG19ZBSkSnU0-V-LHbastza5HoP1GOTpf2J4P2fcTA_igkI15SRem3PCKk1LPk8xS74cYsj2FnQ8yyfgNu_rw5ymj9bwZosskIJ6RferStO5eTI-HQ_0KPkrkR7IBzkaQCP-tnFTbTGXu9h5LNtvnPZMWPJOlXTQEeuTGhRRGVg7api',
-  sitiAminahAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDqes8nFA22U0mLF6d0gWBEI3qQfM89MtKIXBNQ8jertWiFt-ipY7SM47DCH4ZwVitXqK6Jbr_LmQvVE5rFLoiTxj35gM9DNBV3UogyhW5eRmeVQQhTvwzedTlvdZb1i1ZAekydeKO3xnVU1MxnXKKboVVIZ_H8kCaORpS4i9gCoOGqKBIFLrCXI6sEMepehMV7AAHobG7GvGwvtHorA2mDd4wJNoczkqBi5Uu654C3Oe9QQ80jr83P',
-  bambangIrawanAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAEhb02BxQCASzdUke9SmAI5FuU00FXgDNyhfhyz9gfvUjrEbEf9NwZlW16DwiCVn-SkPk8ygE442MDwTgLZc3_pZ6eOGMFsMIeI1sTvxxQ0kdpmWw0y3sWNR-JVtj_YCOmm4hWHLIC5UcG7sHOdOXv6kITYwD4rsYFJ8GvF-SDZAAKcTh4ZvcsYzhQR3vtNqE8mWvnm_HrLNyq6QSUCa1Q-CbXxs5IEvXJIH0zc20wPeDtXz0BtSN6',
-  nurAisyahAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSuyZhEP5R4BR_IDpuL8r6W74dPghy4sN6F5wsXH--T2JWhB83eI-CguhoOGdjs9hUbH-Z2rr1XbST4RqG9xffwRTs2BIqwFU6jxcbwJLNfl1rb7YtyYBoXJMXvQ4300TWGtRAh7xuf19yat3aCQfzQ_jnzUUtE_LyPFTGtv_sMe05QmIdU2T_vFy4WF71jnavQUrR2PNS1uixT147hnPXjf51TO9uoxzF115fFdLiSsUPWI47p-GA',
-  classroomActivity: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDjrrZNz11g2yhNQYH5RyIbN0lCcJeJNCea52hJarOKnbjLVMhSEjiW9CQtrk3sL4lEkZb7noHO-PWJbKso-wnD39hNvktw1pv-ocBHmYLs7bVB_QZZuYeYLEA55GyF3Ue49iY8mUWAb7pQ8VoduvLl-8Gnsm6cR5EeodNyWECRi_j0tQ1jQiIpOfFkeJ_o5CLJYbk6OwD7WeLn432BEGdPPVLnlbjD-YYB9JqvMDPB57HC4XfC41Mb',
-  sitiAminahFormal: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlHEZy7uz3puSS56dvrw5bw-e82615yVfbahXDqpbC8f4GkZbox7yeiBUdUBAjsAg-qI-PX6jqod82uOD0ue-_X6KLdYqtlWSQez4uJWmdPHsJSwYW27fIZkFswVJDIbg-r6jTYUTMHEZ5lMl-ns2BrZqzTcMIj1Vz7lPcrmXPqYzDCdQKIUdHgv5SB4EEW9thS__Za-uS5qJTcjCiGyg8NSHYmJwae0jRUOVfKCFXlSvrx6-rzySY',
-  sitiAminahBatik: 'https://lh3.googleusercontent.com/aida-public/AB6AXuChEfCh9ToihgKKXvuBqXkczhz6MM-hAk4CD9hKkjtYdt6imiMDihf1tDiytFXykX9Cs0Z_EOHlvsbqOv5tjv6Cnd808AcXbR8gQQkWDeLqxgTvE4Gt6JCWOX89fhGOX5TZ6MBx5K00SJe0he2nRAQ0KTsC_cpg0VepG4kZ99II54oU1rFmNCLOTKbFYlEimF6eESHggXvLJRJe4QEzwdB8G5bFxvnJO8PyHmmhf0T_Hd22yOJVcGSC',
-  parentAndChild: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDbvye-NYs6E-phh_8ZANH8T4zFNizFY3HLo3xYLARm_nGlzwf9Btu1hnsGCNmEnn7Yv-YbduaEEMFc_WaRHdb_rC6x2qZ95ytKtbpecDVAgiPAPGs6iqLFaBc2Z9YCg8gaS7LClMS84ZYXj02pS5nBNcwnnVjNqKh9Oe5fbHHDv6D1oI2Tv4h3HfB_EEtqlZbQEtPvLd0NqzLeXbeOXh-z7N8R1a82PhXKEarnQxeHb011mAPROBPf',
-  studentAhmad: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCWRsdnFmN-SJ8gNW_agFmkO21OD3l0SzZSw2vlMiZA7MZXL0qgK_KfQk5WgSHEOC_0lYXYhbYMO8RfGy6o9o3UhrjaI9u2uAhv1wgpAST133X6x8AxDSmnWiSKamIp-g3hswVQq6qTguQRtkmeoOy9UBkQvLNpXfalOFRtf-IStIF4s50wFnp6fqQzDr0tJ8BRKbZcXt3Se89V1WJbw4lTkZwxxFotfeWztsAG6viXcsR74ihq3Ntf',
-  artPosterWater: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSOvZZuoefpWxNBzd-BZxu7iS6HjKb0JdBQQz0CZdlgDb2yIu3KIssQe1pATFUJmDx7FQ1_8BfrsL0DO5-BTT9VmIvLfwChYRoTFIj4RhnSlRJ1sh5eqMbIRx_ONnIp3zWq5APWyYE2fzIEmEDXVNJkMWtmVdh_h6JDtZBfihrWX75IgYaz4m_1i58yofU6PE43lbQK7X8UVr8coroJnb1l3gC-U1ALVdPHjGsVkJa1IPgXR1x0X8l',
-  artScienceProject: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7xkTIN0Ej1IVpMpAxk17HOJ-s2JaiFxUqHaQyBonI1SqHWJjG8mh3zxiTYF14sjlmAIRt5Lmt7a3xdBc34jdnLTxBaxqoToOMyENgGV0xk0bXpNUyhshS7nDTIur_1tFOyz2SZHggZk2ZtEBni_7Q6qADC4_ChyD3lYZ4cUqQEpIil0SP48lG6kuek6ywsVRxrgG1KRVp97EjHZchwNYNBQOutdKJDA4XsckXIvF8uxjWAwt-47y3',
-  motherAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDaGqbt9SXmLx6Jt9JiBDu5-RiyIxmmoXKtQSE5HdTAzMDGvNTAxbDV6JlkdIb8fniT952R1Sf5pMXuppKk9IAIp2R6dj7HzLfMyLIP87aqR-wCy6Hmihi7pkcFrRHapdeBLnMc1WF9NviRkgR_4MwODKTFQ58rxG9QLGrdElHg8U1-pItVJtIB4BA9OtIlq5vNWj7UVS8bmBm1cTFwpnofqtrIMraBkgDdQfEYYFwlsduC1BjxIQ1-',
-  teacherBatikCasual: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB-0aUK6rD_VO3wJDaHpTioG2jO9SZIooYuRTqq9vLQwJherkgrgoCRyfUu-6-n2xtZgd4kNCQVIkCrUAMK9BIEg20RVmT8taHUfPuzA0ZXFN0Li-Oc4wEpqquAKTV3b7jXL1cN9LNzIp4qGJUxgWPC7j3IKL9Vh8VIEXj7YhWxnUG6AkF4VSNHTtQSSOPrSDt8cFo-BA8enXgOvVd2UdSg3Bem_-2LWl2-F9ZyQcWDXKxYNzCLoHPJ',
 };
 
 export const INITIAL_TEACHERS: TeacherRecord[] = [
@@ -23,7 +12,7 @@ export const INITIAL_TEACHERS: TeacherRecord[] = [
     id: 't-1',
     name: 'Ibu Siti Aminah, S.Pd.',
     nip: '19840212 200801 2 018',
-    avatar: APP_ASSETS.sitiAminahAvatar,
+    avatar: '',
     initials: 'SA',
     rombel: 'Kelas IV-A',
     fase: 'fase-b',
@@ -46,7 +35,7 @@ export const INITIAL_TEACHERS: TeacherRecord[] = [
     id: 't-2',
     name: 'Bpk. Bambang Irawan, S.Pd.',
     nip: '19790615 200501 1 009',
-    avatar: APP_ASSETS.bambangIrawanAvatar,
+    avatar: '',
     initials: 'BI',
     rombel: 'Kelas V-B',
     fase: 'fase-c',
@@ -91,7 +80,7 @@ export const INITIAL_TEACHERS: TeacherRecord[] = [
     id: 't-4',
     name: 'Ibu Nur Aisyah, S.Pd.',
     nip: '19910408 201903 2 011',
-    avatar: APP_ASSETS.nurAisyahAvatar,
+    avatar: '',
     initials: 'NA',
     rombel: 'Kelas III-A',
     fase: 'fase-b',
@@ -132,6 +121,14 @@ export const INITIAL_TEACHERS: TeacherRecord[] = [
     assignedObserverName: 'Fahmawati, S.Pd. (Kepala Sekolah)',
     assignedAt: '05 Sep 2025',
   },
+];
+
+export const INITIAL_ROMBEL: RombelRecord[] = [
+  { id: 'r-1b', name: 'Kelas I-B', fase: 'fase-a', waliKelasId: 't-5' },
+  { id: 'r-3a', name: 'Kelas III-A', fase: 'fase-b', waliKelasId: 't-4' },
+  { id: 'r-4a', name: 'Kelas IV-A', fase: 'fase-b', waliKelasId: 't-1' },
+  { id: 'r-5b', name: 'Kelas V-B', fase: 'fase-c', waliKelasId: 't-2' },
+  { id: 'r-6c', name: 'Kelas VI-C', fase: 'fase-c', waliKelasId: 't-3' },
 ];
 
 export const HABIT_LIST: HabitItem[] = [
@@ -266,7 +263,6 @@ export const INITIAL_MURID: MuridRecord[] = [
     fase: 'fase-b',
     parentName: 'Ibu Rahmawati & Bpk. Irwan',
     parentPhone: '0812-4291-8821',
-    avatar: APP_ASSETS.studentAhmad,
     wakeUpTime: '05:00',
     bedTime: '21:00',
     habits: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: false },

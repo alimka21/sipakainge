@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types';
-import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID } from '../data/mockData';
+import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID } from '../data/mockData';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenQuickRecord: () => void;
   userRole?: string;
+  parentMuridId?: string;
 }
 
 export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   onNavigate,
   onOpenQuickRecord,
   userRole = 'orang_tua',
+  parentMuridId,
 }) => {
   const [selectedClass, setSelectedClass] = useState<string>(
     userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
   );
   const [selectedMuridId, setSelectedMuridId] = useState<string>(
-    userRole === 'kepala_sekolah' ? '' : 'm-4a-1'
+    userRole === 'kepala_sekolah' ? '' : parentMuridId || 'm-4a-1'
   );
 
   const isKS = userRole === 'kepala_sekolah';
@@ -190,11 +192,19 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
 
               <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-4 sm:gap-5">
-                  <img
-                    src={activeMurid.avatar || APP_ASSETS.studentAhmad}
-                    alt={activeMurid.name}
-                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-md"
-                  />
+                  {activeMurid.avatar ? (
+                    <img
+                      src={activeMurid.avatar}
+                      alt={activeMurid.name}
+                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-md"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/15 text-white flex items-center justify-center ring-4 ring-white/20 shadow-md shrink-0">
+                      <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {activeMurid.gender === 'L' ? 'boy' : 'girl'}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-teal-500/25 px-2.5 py-0.5 text-xs font-semibold text-teal-200 backdrop-blur-sm">
