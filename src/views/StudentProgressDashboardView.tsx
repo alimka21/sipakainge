@@ -391,6 +391,30 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
         {/* ========================================================= */}
         {filterMode === 'harian' && (
           <div className="space-y-6">
+            {/* Banner Informasi Mode Tinjauan Publik (Read-Only) */}
+            <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-4 flex items-center justify-between gap-4 text-xs text-teal-950">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-teal-700 text-xl shrink-0">
+                  visibility
+                </span>
+                <div>
+                  <span className="font-bold block">
+                    Mode Rekapitulasi Publik (Hanya Tinjauan / Read-Only):
+                  </span>
+                  <span className="text-teal-900/80">
+                    Laman ini hanya berfungsi menampilkan capaian pembiasaan 7 KAIH dan ibadah murid. Pengisian atau pengeditan data hanya dapat dilakukan di <strong>Dashboard Manajemen Guru (Wali Kelas)</strong> atau <strong>Ruang Karakter Orang Tua</strong>.
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate('login')}
+                className="inline-flex items-center gap-1.5 shrink-0 rounded-xl bg-teal-700 px-3.5 py-1.5 font-bold text-white hover:bg-teal-800 transition shadow-xs"
+              >
+                <span className="material-symbols-outlined text-sm">login</span>
+                <span>Login Pengisian Data</span>
+              </button>
+            </div>
+
             {/* Tabel Progres 7 Kebiasaan Harian */}
             <div className="rounded-3xl bg-white p-6 sm:p-7 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -400,7 +424,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                     Tabel Progres Pembiasaan Harian — {selectedDay} September 2025
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Klik tanda centang untuk menandai status kebiasaan ananda <strong>{activeMurid.name}</strong> ({activeMurid.rombel})
+                    Status pembiasaan harian ananda <strong>{activeMurid.name}</strong> ({activeMurid.rombel})
                   </p>
                 </div>
 
@@ -418,10 +442,10 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                     <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                       <th className="py-3 px-4 rounded-l-xl">No & Kebiasaan</th>
                       <th className="py-3 px-4">Kategori Karakter</th>
-                      <th className="py-3 px-4">Input Khusus / Detail Waktu</th>
+                      <th className="py-3 px-4">Detail Waktu / Keterangan</th>
                       <th className="py-3 px-4">Target Standar</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                      <th className="py-3 px-4 text-center rounded-r-xl">Tindakan Centang</th>
+                      <th className="py-3 px-4 text-center">Status Capaian</th>
+                      <th className="py-3 px-4 text-center rounded-r-xl">Ketercapaian</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -436,17 +460,10 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                       <td className="py-3.5 px-4 text-slate-600">Kedisiplinan Diri</td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
-                          <label className="text-[11px] font-semibold text-slate-500">Jam Bangun:</label>
-                          <input
-                            type="time"
-                            value={wakeUpTime}
-                            onChange={(e) => {
-                              setWakeUpTime(e.target.value);
-                              showToast(`Jam bangun diperbarui: ${e.target.value} WITA`);
-                            }}
-                            className="rounded-lg border border-slate-200 px-2 py-1 font-bold text-teal-800 focus:border-teal-600 focus:outline-none bg-teal-50/40"
-                          />
-                          <span className="text-[10px] text-slate-400">WITA</span>
+                          <span className="text-[11px] font-semibold text-slate-500">Jam Bangun:</span>
+                          <span className="rounded-lg border border-teal-200 px-2.5 py-1 font-bold text-teal-900 bg-teal-50/60">
+                            {wakeUpTime} WITA
+                          </span>
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">Pukul 04.45 - 05.15 WITA</td>
@@ -462,17 +479,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(1)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[1]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
-                          title="Klik untuk mengubah tanda centang"
+                          title="Status Pembiasaan #1"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[1] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -511,17 +527,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(2)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[2]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
-                          title="Klik untuk mengubah tanda centang"
+                          title="Status Pembiasaan #2"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[2] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -548,16 +563,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(3)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[3]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
+                          title="Status Pembiasaan #3"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[3] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -584,16 +599,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(4)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[4]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
+                          title="Status Pembiasaan #4"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[4] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -620,16 +635,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(5)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[5]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
+                          title="Status Pembiasaan #5"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[5] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -656,16 +671,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(6)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[6]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
+                          title="Status Pembiasaan #6"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[6] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
 
@@ -680,17 +695,10 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                       <td className="py-3.5 px-4 text-slate-600">Istirahat & Kebugaran</td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
-                          <label className="text-[11px] font-semibold text-slate-500">Target Tidur:</label>
-                          <input
-                            type="time"
-                            value={bedTime}
-                            onChange={(e) => {
-                              setBedTime(e.target.value);
-                              showToast(`Jam tidur malam disetel: ${e.target.value} WITA`);
-                            }}
-                            className="rounded-lg border border-slate-200 px-2 py-1 font-bold text-teal-800 focus:border-teal-600 focus:outline-none bg-teal-50/40"
-                          />
-                          <span className="text-[10px] text-slate-400">WITA</span>
+                          <span className="text-[11px] font-semibold text-slate-500">Target Tidur:</span>
+                          <span className="rounded-lg border border-teal-200 px-2.5 py-1 font-bold text-teal-900 bg-teal-50/60">
+                            {bedTime} WITA
+                          </span>
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">Maksimal 21.00 WITA</td>
@@ -706,16 +714,16 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => toggleHabit(7)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
                             habitStatus[7]
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-300 bg-white text-slate-400 hover:border-teal-600'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-300'
                           }`}
+                          title="Status Pembiasaan #7"
                         >
-                          <span className="material-symbols-outlined text-base font-bold">check</span>
-                        </button>
+                          {habitStatus[7] ? '✓' : '—'}
+                        </span>
                       </td>
                     </tr>
                   </tbody>
@@ -760,13 +768,12 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   ].map((p) => {
                     const isDone = prayers[p.key as keyof PrayerTimesChecklist];
                     return (
-                      <button
+                      <div
                         key={p.key}
-                        onClick={() => togglePrayer(p.key as keyof PrayerTimesChecklist)}
-                        className={`flex flex-col items-start justify-between rounded-2xl p-3.5 text-left transition-all border ${
+                        className={`flex flex-col items-start justify-between rounded-2xl p-3.5 text-left border ${
                           isDone
-                            ? 'border-emerald-300 bg-emerald-50/80 text-emerald-950 shadow-sm'
-                            : 'border-slate-200 bg-slate-50/60 text-slate-600 hover:bg-slate-100'
+                            ? 'border-emerald-300 bg-emerald-50/80 text-emerald-950 shadow-xs'
+                            : 'border-slate-200 bg-slate-50/60 text-slate-600'
                         }`}
                       >
                         <div className="flex w-full items-center justify-between">
@@ -775,10 +782,10 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                             className={`flex h-5 w-5 items-center justify-center rounded-md border text-xs font-bold ${
                               isDone
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white text-transparent'
+                                : 'border-slate-300 bg-white text-slate-300'
                             }`}
                           >
-                            ✓
+                            {isDone ? '✓' : '—'}
                           </span>
                         </div>
                         <span className="mt-2 text-[10px] text-slate-500">{p.time}</span>
@@ -787,9 +794,9 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                             isDone ? 'text-emerald-700' : 'text-slate-400'
                           }`}
                         >
-                          {isDone ? '✓ Sudah Sholat' : 'Belum'}
+                          {isDone ? '✓ Sudah Sholat' : 'Belum Terlaksana'}
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -823,13 +830,12 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   ].map((extra) => {
                     const isDone = prayers[extra.key as keyof PrayerTimesChecklist];
                     return (
-                      <button
+                      <div
                         key={extra.key}
-                        onClick={() => togglePrayer(extra.key as keyof PrayerTimesChecklist)}
-                        className={`flex items-start justify-between rounded-2xl p-4 text-left transition-all border ${
+                        className={`flex items-start justify-between rounded-2xl p-4 text-left border ${
                           isDone
-                            ? 'border-emerald-300 bg-emerald-50/80 text-emerald-950 shadow-sm'
-                            : 'border-slate-200 bg-slate-50/60 text-slate-600 hover:bg-slate-100'
+                            ? 'border-emerald-300 bg-emerald-50/80 text-emerald-950 shadow-xs'
+                            : 'border-slate-200 bg-slate-50/60 text-slate-600'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -844,7 +850,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                                 isDone ? 'text-emerald-700' : 'text-slate-400'
                               }`}
                             >
-                              {isDone ? '✓ Dilaksanakan' : 'Belum'}
+                              {isDone ? '✓ Dilaksanakan' : 'Belum Terlaksana'}
                             </span>
                           </div>
                         </div>
@@ -853,12 +859,12 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
                             isDone
                               ? 'border-emerald-600 bg-emerald-600 text-white'
-                              : 'border-slate-300 bg-white text-transparent'
+                              : 'border-slate-300 bg-white text-slate-300'
                           }`}
                         >
-                          ✓
+                          {isDone ? '✓' : '—'}
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

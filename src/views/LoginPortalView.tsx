@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId, UserRole } from '../types';
 import { APP_ASSETS } from '../data/mockData';
+import { SchoolLogo } from '../components/SchoolLogo';
 
 interface LoginPortalViewProps {
   onLogin: (role: UserRole) => void;
@@ -52,15 +53,15 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
           <div className="relative z-10 flex flex-col gap-6">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white text-xs font-semibold max-w-fit border border-white/15">
               <span className="material-symbols-outlined text-sm text-[#89f5e7]">verified</span>
-              <span>Standar Kemendikbudristek RI</span>
+              <span>Standar Kemendikdasmen RI</span>
             </div>
 
             <div>
               <span className="text-[11px] text-[#89f5e7] uppercase font-bold tracking-wider">
-                EKOSISTEM EDUCARE NASIONAL
+                UPT SPF SDN PERCONTOHAN PAM MAKASSAR
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 leading-snug">
-                Sistem Terpadu Pemantauan Pembelajaran, Supervisi Guru & Pembiasaan Karakter Siswa.
+                Sistem Terpadu Pemantauan Pembelajaran, Supervisi Guru & Pembiasaan Karakter Murid.
               </h1>
               <p className="text-xs text-white/80 mt-3 leading-relaxed">
                 Platform tata kelola mutu sekolah holistik berbasis penguatan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH) dan
@@ -73,15 +74,15 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
               <div className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#89f5e7]">
-                    <span className="material-symbols-outlined text-base">account_balance</span>
+                    <span className="material-symbols-outlined text-base">psychology</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-white/70 block uppercase font-medium">Sekolah Terhubung</span>
-                    <span className="text-base font-bold leading-tight">32+</span>
+                    <span className="text-[10px] text-white/70 block uppercase font-medium">Supervisi Klinis Pendidik</span>
+                    <span className="text-base font-bold leading-tight">100% Terjadwal</span>
                   </div>
                 </div>
                 <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-medium text-[#89f5e7]">
-                  Aktif Wilayah
+                  5 Tahap Siklus
                 </span>
               </div>
 
@@ -128,14 +129,10 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
           <div>
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-              <img
-                alt="Logo EduCare"
-                className="h-11 w-11 object-contain p-1 rounded-xl bg-[#eff4ff] border border-slate-100"
-                src={APP_ASSETS.logo}
-              />
+              <SchoolLogo className="h-12 w-12 rounded-2xl bg-white shadow-xs p-0.5 border border-slate-200/80 shrink-0" />
               <div className="flex flex-col">
-                <h2 className="text-lg font-bold text-slate-900 leading-tight">Portal EduCare Terpadu</h2>
-                <p className="text-xs text-slate-500">Masuk ke akun administrasi sekolah Anda</p>
+                <h2 className="text-lg font-bold text-slate-900 leading-tight">Portal SIPAKAINGE Terpadu</h2>
+                <p className="text-xs text-slate-500">SDN Percontohan PAM Makassar • Masuk Akun</p>
               </div>
             </div>
 
@@ -154,7 +151,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Kepala / Pengawas
+                  Kepala Sekolah
                 </button>
                 <button
                   type="button"
@@ -176,7 +173,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Orang Tua Siswa
+                  Orang Tua Murid
                 </button>
               </div>
             </div>
@@ -282,7 +279,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                 Hubungi Admin Sekolah
               </a>
             </span>
-            <span>© 2025 EduCare Indonesia</span>
+            <span>© 2026 Portal SIPAKAINGE Terpadu</span>
           </div>
         </div>
       </div>

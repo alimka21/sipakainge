@@ -5,6 +5,7 @@ export type ScreenId =
   | 'login'
   | 'supervision_dashboard'
   | 'teacher_dashboard'
+  | 'teacher_my_supervision'
   | 'student_dashboard'
   | 'observation_form'
   | 'follow_up_plan'
@@ -66,6 +67,62 @@ export interface TeacherRecord {
   isObserver?: boolean;
   assignedObserverName?: string;
   assignedAt?: string;
+}
+
+export type SupervisionStatus =
+  | 'DRAFT'
+  | 'DIAJUKAN'
+  | 'DISETUJUI'
+  | 'TERJADWAL'
+  | 'DOKUMEN_DIUPLOAD'
+  | 'PERANGKAT_DINILAI'
+  | 'OBSERVASI_DILAKUKAN'
+  | 'HASIL_SUPERVISI_TERSEDIA'
+  | 'REFLEKSI_GURU'
+  | 'PENGUATAN_KEPALA_SEKOLAH'
+  | 'TINDAK_LANJUT'
+  | 'SELESAI';
+
+export interface SupervisionSession {
+  status: SupervisionStatus;
+  mapel: string;
+  kelas: string;
+  topik: string;
+  tujuan: string;
+  tanggal: string;
+  jam: string;
+  lokasi: string;
+  supervisor: string;
+  catatanAwal: string;
+  rppFileName: string;
+  rppFileSize: string;
+  rppUploadDate: string;
+  rppStatus: 'BELUM_DIPERIKSA' | 'DIPERIKSA' | 'PERLU_PERBAIKAN';
+  scores17: Record<number, number>;
+  comments17: Record<number, string>;
+  aspectStatus14: Record<number, 'revisi' | 'tidak_revisi'>;
+  aspectFeedback14: Record<number, string>;
+  kelebihan15: string;
+  kekurangan16: string;
+  rekomendasi17: string;
+  obsTimerSeconds: number;
+  obsNotes: string;
+  reflection1: string;
+  reflection2: string;
+  reflection3: string;
+  reflection4: string;
+  reflection5: string;
+  reflection6: string;
+  penguatanKS: string;
+  catatanKhususKS: string;
+  rekomendasiKS: string;
+  tindakLanjutKS: 'TIDAK_ADA_TINDAK_LANJUT' | 'TINDAK_LANJUT_RINGAN' | 'PERLU_PENDAMPINGAN' | 'PERLU_SUPERVISI_LANJUTAN';
+  scores22?: Record<number, number>;
+  comments22?: Record<number, string>;
+  apresiasiObs?: string;
+  temuanObs?: string;
+  kesimpulanObs?: 'Sangat Baik' | 'Baik' | 'Baik dengan Penguatan' | 'Memerlukan Pendampingan Intensif';
+  komitmenGuruNew?: string;
 }
 
 export interface HabitItem {

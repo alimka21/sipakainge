@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types';
-import { APP_ASSETS } from '../data/mockData';
+import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 
 interface FollowUpPlanViewProps {
   onNavigate: (screen: ScreenId) => void;
   onDownloadReport: () => void;
+  selectedTeacherId?: string;
+  onSelectTeacherId?: (id: string) => void;
 }
 
 export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
   onNavigate,
   onDownloadReport,
+  selectedTeacherId: propSelectedTeacherId,
+  onSelectTeacherId,
 }) => {
+  const [localTeacherId, setLocalTeacherId] = useState<string>('t-1');
+  const selectedTeacherId = propSelectedTeacherId || localTeacherId;
+  const setSelectedTeacherId = (id: string) => {
+    if (onSelectTeacherId) onSelectTeacherId(id);
+    setLocalTeacherId(id);
+  };
+  const currentTeacher =
+    INITIAL_TEACHERS.find((t) => t.id === selectedTeacherId) || INITIAL_TEACHERS[0];
+
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
@@ -62,7 +75,44 @@ export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
         </div>
       </div>
 
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-6 space-y-8">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-6 space-y-6">
+        {/* ======================================================== */}
+        {/* LANGKAH 1: PILIH GURU YANG DISUPERVISI (DROPDOWN)        */}
+        {/* ======================================================== */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-teal-800 text-white font-bold text-xs flex items-center justify-center">
+                1
+              </span>
+              <h2 className="text-sm font-bold text-slate-900">
+                Langkah 1: Pilih Guru untuk Rencana Tindak Lanjut (RTL)
+              </h2>
+            </div>
+            <span className="text-xs text-slate-500 font-medium">
+              Siklus Kolaboratif Tanpa Penghakiman
+            </span>
+          </div>
+
+          <div className="max-w-md">
+            <label htmlFor="teacher-select" className="block text-xs font-bold text-slate-700 mb-1.5">
+              Pilih Nama Guru / Pendidik:
+            </label>
+            <select
+              id="teacher-select"
+              value={selectedTeacherId}
+              onChange={(e) => setSelectedTeacherId(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
+            >
+              {INITIAL_TEACHERS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} (NIP: {t.nip}) — {t.rombel} [{t.subject}]
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Header Profile & Score Bento */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Profile Card (8 cols) */}
@@ -90,8 +140,8 @@ export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
                 <div className="relative shrink-0">
                   <img
                     className="w-20 h-20 rounded-2xl object-cover shadow-sm ring-4 ring-white"
-                    alt="Ibu Siti Aminah"
-                    src={APP_ASSETS.sitiAminahBatik}
+                    alt={currentTeacher.name}
+                    src={currentTeacher.avatar || APP_ASSETS.sitiAminahBatik}
                   />
                   <span
                     className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#006947] text-white flex items-center justify-center text-xs shadow-xs"
@@ -103,13 +153,15 @@ export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-bold text-slate-900 truncate">Ibu Siti Aminah, S.Pd.</h2>
+                    <h2 className="text-lg font-bold text-slate-900 truncate">
+                      {currentTeacher.name}
+                    </h2>
                     <span className="px-2 py-0.5 rounded bg-white text-slate-600 text-xs font-medium border border-slate-200">
-                      NIP: 19880412 201101 2 008
+                      NIP: {currentTeacher.nip}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 mt-0.5 font-medium">
-                    Guru Kelas IV-A • Pengampu Bidang Studi IPAS & Matematika
+                    {currentTeacher.rombel} • {currentTeacher.subject}
                   </p>
                   <div className="flex flex-wrap items-center gap-4 mt-2.5 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5">
@@ -119,7 +171,7 @@ export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-base text-[#4b41e1]">record_voice_over</span>
                       <span>
-                        Observer: <strong className="text-slate-900">Fahmawati, S.Pd. (Kepala Sekolah)</strong>
+                        Observer: <strong className="text-slate-900">{currentTeacher.assignedObserverName || 'Fahmawati, S.Pd. (Kepala Sekolah)'}</strong>
                       </span>
                     </div>
                   </div>
@@ -363,7 +415,7 @@ export const FollowUpPlanView: React.FC<FollowUpPlanViewProps> = ({
                       Sasaran Perubahan:
                     </span>
                     <p className="mt-1 leading-relaxed">
-                      Memfasilitasi siswa menyajikan laporan eksperimen IPAS dalam berbagai opsi format (infografis
+                      Memfasilitasi murid menyajikan laporan eksperimen IPAS dalam berbagai opsi format (infografis
                       sederhana, komik sains, atau rekaman audio pendek).
                     </p>
                   </div>

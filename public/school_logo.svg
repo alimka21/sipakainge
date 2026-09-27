@@ -1,0 +1,45 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo SDN Percontohan PAM Terdepan Makassar">
+  <circle cx="100" cy="100" r="96" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+  <circle cx="100" cy="100" r="92" fill="#ffffff" />
+  <defs>
+    <path id="upperSchoolTextPath" d="M 28 100 A 72 72 0 0 1 172 100" fill="none" />
+    <path id="lowerSchoolTextPath" d="M 32 100 A 68 68 0 0 0 168 100" fill="none" />
+    <linearGradient id="streakGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="streakCyan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="streakRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f87171" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
+    <linearGradient id="streakGreen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#16a34a" />
+    </linearGradient>
+  </defs>
+  <text fill="#0b2c6b" font-size="14.5" font-weight="900" font-family="system-ui, -apple-system, sans-serif" letter-spacing="2.5">
+    <textPath href="#upperSchoolTextPath" startOffset="50%" text-anchor="middle">SDN PERCONTOHAN PAM</textPath>
+  </text>
+  <text fill="#0b2c6b" font-size="17.5" font-weight="900" font-family="system-ui, -apple-system, sans-serif" letter-spacing="6">
+    <textPath href="#lowerSchoolTextPath" startOffset="50%" text-anchor="middle">TERDEPAN</textPath>
+  </text>
+  <path d="M 28 80 C 44 80, 70 78, 88 84 C 74 87, 50 87, 28 85 Z" fill="url(#streakGold)" />
+  <circle cx="88" cy="84" r="3.5" fill="#d97706" />
+  <path d="M 27 96 C 44 96, 74 95, 90 99 C 76 102, 50 102, 27 100 Z" fill="url(#streakCyan)" />
+  <circle cx="90" cy="99" r="4" fill="#0284c7" />
+  <path d="M 28 112 C 45 112, 70 112, 87 115 C 72 118, 50 118, 28 116 Z" fill="url(#streakRed)" />
+  <circle cx="87" cy="115" r="3.5" fill="#dc2626" />
+  <path d="M 30 128 C 48 128, 68 127, 85 130 C 72 133, 52 133, 30 131 Z" fill="url(#streakGreen)" />
+  <circle cx="85" cy="130" r="3.5" fill="#16a34a" />
+  <g fill="#0b2c6b">
+    <circle cx="152" cy="74" r="10" />
+    <path d="M 148 84 C 158 87, 172 96, 178 112 C 176 113, 172 113, 169 110 C 164 99, 154 94, 146 90 Z" />
+    <path d="M 124 94 C 114 84, 102 78, 96 82 C 94 85, 96 90, 102 92 C 110 94, 118 99, 126 106 Z" />
+    <path d="M 130 92 C 142 98, 148 108, 140 122 C 134 133, 126 142, 138 152 C 146 160, 148 163, 144 165 C 137 167, 130 162, 124 150 C 116 135, 122 124, 127 114 C 129 108, 126 102, 120 98 Z" />
+    <path d="M 125 120 C 116 128, 96 148, 66 160 C 80 148, 102 132, 115 116 Z" />
+  </g>
+</svg>

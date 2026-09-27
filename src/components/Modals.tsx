@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { APP_ASSETS, HABIT_LIST } from '../data/mockData';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID } from '../data/mockData';
 
 interface BeritaAcaraModalProps {
   isOpen: boolean;
@@ -139,9 +139,13 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const [selectedMuridId, setSelectedMuridId] = useState<string>('m-4a-1');
+  const muridIV_A = INITIAL_MURID.filter((m) => m.rombel === 'Kelas IV-A');
+  const currentMurid = INITIAL_MURID.find((m) => m.id === selectedMuridId) || muridIV_A[0];
+
   const [selectedHabits, setSelectedHabits] = useState<number[]>([1, 2, 4, 5, 6]);
-  const [wakeTime, setWakeTime] = useState('05:00');
-  const [bedTime, setBedTime] = useState('21:00');
+  const [wakeTime, setWakeTime] = useState(currentMurid?.wakeUpTime || '05:00');
+  const [bedTime, setBedTime] = useState(currentMurid?.bedTime || '21:00');
   const [prayers, setPrayers] = useState({
     subuh: true,
     dzuhur: true,
@@ -155,6 +159,15 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
   const [quickNote, setQuickNote] = useState('');
 
   if (!isOpen) return null;
+
+  const handleSelectMurid = (id: string) => {
+    setSelectedMuridId(id);
+    const m = INITIAL_MURID.find((x) => x.id === id);
+    if (m) {
+      setWakeTime(m.wakeUpTime);
+      setBedTime(m.bedTime);
+    }
+  };
 
   const toggle = (id: number) => {
     setSelectedHabits((prev) =>
@@ -176,7 +189,9 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold">1-Klik Input Pembiasaan Harian</h3>
-              <p className="text-xs text-teal-100">Catat pembiasaan Ahmad Faris Al-Fatih hari ini</p>
+              <p className="text-xs text-teal-100">
+                Pencatatan 7 KAIH per murid untuk {currentMurid.name} ({currentMurid.rombel})
+              </p>
             </div>
           </div>
           <button
@@ -188,6 +203,25 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
         </div>
 
         <div className="max-h-[75vh] overflow-y-auto p-6 space-y-4 text-xs">
+          {/* Murid Selector (Wali Kelas) */}
+          <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-teal-800 text-lg">person</span>
+              <span className="font-bold text-teal-950 text-xs">Pilih Murid (Kelas IV-A):</span>
+            </div>
+            <select
+              value={selectedMuridId}
+              onChange={(e) => handleSelectMurid(e.target.value)}
+              className="rounded-xl border border-teal-300 bg-white px-3 py-1.5 text-xs font-bold text-teal-900 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            >
+              {muridIV_A.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} (NISN: {m.nisn})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Input Waktu Bangun & Tidur */}
           <div className="grid grid-cols-2 gap-3 rounded-2xl bg-teal-50/60 p-3.5 border border-teal-100">
             <div>
@@ -233,13 +267,12 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-5 gap-1.5 pt-1">
+            <div className="grid grid-cols-4 gap-1.5 pt-1">
               {[
-                { k: 'subuh', label: 'Subuh' },
-                { k: 'dzuhur', label: 'Dzuhur' },
-                { k: 'ashar', label: 'Ashar' },
-                { k: 'maghrib', label: 'Maghrib' },
-                { k: 'isya', label: 'Isya' },
+                { k: 'subuh', label: 'Subuh (Rumah)' },
+                { k: 'ashar', label: 'Ashar (Rumah)' },
+                { k: 'maghrib', label: 'Maghrib (Rumah)' },
+                { k: 'isya', label: 'Isya (Rumah)' },
               ].map((p) => {
                 const active = prayers[p.k as keyof typeof prayers];
                 return (
@@ -249,7 +282,7 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
                     onClick={() => togglePrayer(p.k as keyof typeof prayers)}
                     className={`rounded-lg py-1.5 text-center text-[11px] font-bold border transition ${
                       active
-                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
                         : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'
                     }`}
                   >
@@ -259,30 +292,45 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
               })}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            {/* Ibadah Khusus Sekolah (Dhuha & Dhuhur) */}
+            <div className="rounded-xl bg-teal-50/80 p-2.5 border border-teal-200/80 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase text-teal-900 tracking-wider flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs text-teal-700">school</span>
+                  Ibadah di Sekolah (Wewenang Guru / Wali Kelas):
+                </span>
+                <span className="text-[9px] bg-teal-200 text-teal-900 font-bold px-1.5 py-0.2 rounded">
+                  Dipantau Guru
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center justify-between rounded-lg bg-white p-2 border border-teal-100">
+                  <span className="text-[11px] font-bold text-slate-800">Shalat Dhuha</span>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                    {prayers.dhuha ? '✓ Terisi Guru' : 'Belum'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-white p-2 border border-teal-100">
+                  <span className="text-[11px] font-bold text-slate-800">Shalat Dhuhur</span>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                    {prayers.dzuhur ? '✓ Terisi Guru' : 'Belum'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => togglePrayer('tadarus')}
-                className={`flex items-center justify-between rounded-lg p-2 text-left border transition ${
+                className={`w-full flex items-center justify-between rounded-lg p-2 text-left border transition ${
                   prayers.tadarus
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
                     : 'bg-white border-slate-200 text-slate-600'
                 }`}
               >
-                <span>Tadarus / Mengaji</span>
-                <span>{prayers.tadarus ? '✓' : '—'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => togglePrayer('dhuha')}
-                className={`flex items-center justify-between rounded-lg p-2 text-left border transition ${
-                  prayers.dhuha
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
-                    : 'bg-white border-slate-200 text-slate-600'
-                }`}
-              >
-                <span>Sholat Dhuha / Doa</span>
-                <span>{prayers.dhuha ? '✓' : '—'}</span>
+                <span>Tadarus Al-Qur'an / Mengaji (Di Rumah Bersama Orang Tua)</span>
+                <span>{prayers.tadarus ? '✓ Terlaksana' : '—'}</span>
               </button>
             </div>
           </div>

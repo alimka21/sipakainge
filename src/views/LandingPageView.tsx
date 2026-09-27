@@ -2,6 +2,7 @@ import React from 'react';
 import { ScreenId } from '../types';
 import { APP_ASSETS } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
+import { SchoolLogo } from '../components/SchoolLogo';
 
 interface LandingPageViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -26,9 +27,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
               {/* Text Column */}
               <div className="lg:col-span-7 flex flex-col gap-5">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white max-w-fit shadow-sm border border-slate-100">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-100 max-w-fit">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#00685f] animate-pulse"></span>
-                  <span className="text-xs text-[#00685f] font-bold uppercase tracking-wider">
+                  <span className="text-[11px] sm:text-xs text-[#00685f] font-bold uppercase tracking-wider">
                     UPT SPF SDN PERCONTOHAN PAM MAKASSAR • AKREDITASI A UNGGUL
                   </span>
                 </div>
@@ -750,59 +751,29 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
       <footer className="w-full bg-[#eff4ff] text-[#0b1c30] border-t border-slate-200/60">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 mb-8">
-            <div className="lg:col-span-4 flex flex-col gap-2.5">
-              <div className="flex items-center gap-2.5">
-                <img
-                  alt="Logo SIPAKAINGE"
-                  className="h-8 w-auto object-contain"
-                  src={APP_ASSETS.logo}
-                />
-                <span className="text-lg font-bold text-[#00685f]">SIPAKAINGE</span>
+            <div className="lg:col-span-5 flex flex-col gap-2.5">
+              <div className="flex items-center gap-3">
+                <SchoolLogo className="h-11 w-11 rounded-full shadow-xs bg-white p-0.5 ring-1 ring-slate-200 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-lg font-black tracking-tight text-[#00685f]">SIPAKAINGE</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                    SDN Percontohan PAM Makassar
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-sm">
+              <p className="text-xs text-slate-600 leading-relaxed max-w-md">
                 Sistem Terpadu Supervisi Pembelajaran Kolaboratif Berbasis Data, Asesmen, Refleksi, dan Transformasi
                 Karakter Peserta Didik Unggul di Kota Makassar.
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white max-w-fit shadow-xs border border-slate-100 mt-1">
                 <span className="w-2 h-2 rounded-full bg-[#00855b]"></span>
                 <span className="text-[11px] text-[#006947] font-semibold">
-                  Akreditasi A Unggul Kemendikbudristek
+                  Akreditasi A Unggul Kemendikdasmen
                 </span>
               </div>
             </div>
 
-            <div className="lg:col-span-3 flex flex-col gap-2">
-              <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">Navigasi Pintar</span>
-              <ul className="flex flex-col gap-1.5 text-xs">
-                <li>
-                  <a href="#beranda" className="text-slate-600 hover:text-[#00685f] transition-colors">
-                    Beranda Utama
-                  </a>
-                </li>
-                <li>
-                  <a href="#filosofi" className="text-slate-600 hover:text-[#00685f] transition-colors">
-                    Tentang & Filosofi Sipakainge
-                  </a>
-                </li>
-                <li>
-                  <a href="#7-kebiasaan" className="text-slate-600 hover:text-[#00685f] transition-colors">
-                    7 Kebiasaan Anak Indonesia Hebat (7 KAIH)
-                  </a>
-                </li>
-                <li>
-                  <a href="#alur-supervisi" className="text-slate-600 hover:text-[#00685f] transition-colors">
-                    Alur Supervisi Kolaboratif Tiga Tahap
-                  </a>
-                </li>
-                <li>
-                  <a href="#dampak" className="text-slate-600 hover:text-[#00685f] transition-colors">
-                    Portofolio Guru & Dampak Belajar
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div className="lg:col-span-3 flex flex-col gap-2">
+            <div className="lg:col-span-4 flex flex-col gap-2">
               <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">Sekretariat & Lokasi</span>
               <div className="flex flex-col gap-1 text-xs text-slate-600">
                 <div className="flex items-start gap-1.5">
@@ -824,12 +795,12 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate }) 
               </div>
             </div>
 
-            <div className="lg:col-span-2 flex flex-col gap-2">
+            <div className="lg:col-span-3 flex flex-col gap-2">
               <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">Akses Pendidik</span>
-              <p className="text-xs text-slate-500">Masuk ke portal internal guru, kepala sekolah, dan pengawas pembina.</p>
+              <p className="text-xs text-slate-500">Masuk ke portal internal guru dan kepala sekolah.</p>
               <button
                 onClick={() => onNavigate('login')}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 transition-all shadow-xs border border-slate-200"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 transition-all shadow-xs border border-slate-200 mt-1"
               >
                 <span className="material-symbols-outlined text-sm text-[#00685f]">lock_open</span>
                 <span>Masuk Portal</span>

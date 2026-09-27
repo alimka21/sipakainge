@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types';
-import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS } from '../data/mockData';
+import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID } from '../data/mockData';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenQuickRecord: () => void;
+  userRole?: string;
 }
 
 export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   onNavigate,
   onOpenQuickRecord,
+  userRole = 'orang_tua',
 }) => {
+  const [selectedClass, setSelectedClass] = useState<string>(
+    userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
+  );
+  const [selectedMuridId, setSelectedMuridId] = useState<string>(
+    userRole === 'kepala_sekolah' ? '' : 'm-4a-1'
+  );
+
+  const isKS = userRole === 'kepala_sekolah';
+  const classMuridList = INITIAL_MURID.filter(m => !selectedClass || m.rombel === selectedClass);
+  const activeMurid = selectedMuridId 
+    ? INITIAL_MURID.find(m => m.id === selectedMuridId)
+    : (isKS ? undefined : INITIAL_MURID[0]);
+
   const [selectedDay, setSelectedDay] = useState<number>(25);
   const [activeFilter, setActiveFilter] = useState<'all' | number>('all');
   const [daysData, setDaysData] = useState(CALENDAR_DAYS);
@@ -118,39 +133,89 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
-        {/* Child Header Card */}
-        <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 p-6 sm:p-8 text-white shadow-xl shadow-teal-950/15">
-          <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-teal-400/10 blur-3xl pointer-events-none"></div>
-          <div className="absolute left-1/3 bottom-0 -mb-20 h-48 w-48 rounded-full bg-emerald-300/10 blur-2xl pointer-events-none"></div>
+        {/* SELECTOR FOR TEACHERS AND PRINCIPALS */}
+        {(userRole === 'kepala_sekolah' || userRole === 'guru') && (
+          <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <h2 className="text-sm font-bold text-slate-950 flex items-center gap-2">
+              <span className="material-symbols-outlined text-teal-800 text-lg">person_search</span>
+              <span>Pilih Kelas & Siswa untuk Menampilkan Kalender Jurnal 7 KAIH</span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Rombel / Kelas:</label>
+                <select
+                  value={selectedClass}
+                  onChange={(e) => {
+                    setSelectedClass(e.target.value);
+                    setSelectedMuridId('');
+                  }}
+                  disabled={userRole === 'guru'} // Guru is locked to Kelas IV-A
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-75"
+                >
+                  <option value="">-- Pilih Kelas --</option>
+                  <option value="Kelas I-B">Kelas I-B</option>
+                  <option value="Kelas III-A">Kelas III-A</option>
+                  <option value="Kelas IV-A">Kelas IV-A</option>
+                  <option value="Kelas V-B">Kelas V-B</option>
+                  <option value="Kelas VI-C">Kelas VI-C</option>
+                </select>
+              </div>
 
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4 sm:gap-5">
-              <img
-                src={APP_ASSETS.studentAhmad}
-                alt="Ahmad Faris"
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-md"
-              />
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-teal-500/25 px-2.5 py-0.5 text-xs font-semibold text-teal-200 backdrop-blur-sm">
-                    Kelas IV-A • Fase B
-                  </span>
-                  <span className="rounded-full bg-amber-500/30 px-2.5 py-0.5 text-xs font-semibold text-amber-200 backdrop-blur-sm">
-                    ★ Bintang Kebiasaan Pekan Ini
-                  </span>
-                </div>
-                <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-white font-serif">
-                  Ahmad Faris Al-Fatih
-                </h1>
-                <p className="mt-1 text-xs sm:text-sm text-teal-100/90 flex flex-wrap items-center gap-3">
-                  <span>NISN: 0129384756</span>
-                  <span>•</span>
-                  <span>Wali Kelas: Ibu Siti Aminah, S.Pd.</span>
-                  <span>•</span>
-                  <span>UPT SPF SDN Percontohan PAM Makassar</span>
-                </p>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Nama Siswa:</label>
+                <select
+                  value={selectedMuridId}
+                  onChange={(e) => setSelectedMuridId(e.target.value)}
+                  disabled={!selectedClass}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-50"
+                >
+                  <option value="">-- Pilih Siswa --</option>
+                  {classMuridList.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} (NISN: {m.nisn})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeMurid ? (
+          <>
+            {/* Child Header Card */}
+            <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-teal-900 via-teal-800 to-emerald-800 p-6 sm:p-8 text-white shadow-xl shadow-teal-950/15">
+              <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-teal-400/10 blur-3xl pointer-events-none"></div>
+              <div className="absolute left-1/3 bottom-0 -mb-20 h-48 w-48 rounded-full bg-emerald-300/10 blur-2xl pointer-events-none"></div>
+
+              <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-4 sm:gap-5">
+                  <img
+                    src={activeMurid.avatar || APP_ASSETS.studentAhmad}
+                    alt={activeMurid.name}
+                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover ring-4 ring-white/20 shadow-md"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-teal-500/25 px-2.5 py-0.5 text-xs font-semibold text-teal-200 backdrop-blur-sm">
+                        {activeMurid.rombel} • {activeMurid.rombel.includes('V') ? 'Fase C' : 'Fase B'}
+                      </span>
+                      <span className="rounded-full bg-amber-500/30 px-2.5 py-0.5 text-xs font-semibold text-amber-200 backdrop-blur-sm">
+                        ★ Bintang Kebiasaan Pekan Ini
+                      </span>
+                    </div>
+                    <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-white font-serif">
+                      {activeMurid.name}
+                    </h1>
+                    <p className="mt-1 text-xs sm:text-sm text-teal-100/90 flex flex-wrap items-center gap-3">
+                      <span>NISN: {activeMurid.nisn}</span>
+                      <span>•</span>
+                      <span>Wali Kelas: {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}</span>
+                      <span>•</span>
+                      <span>UPT SPF SDN Percontohan PAM Makassar</span>
+                    </p>
+                  </div>
+                </div>
 
             {/* Quick Metrics Bento */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
@@ -703,6 +768,18 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
             </div>
           </div>
         </div>
+          </>
+        ) : (
+          <div className="text-center p-12 border border-dashed border-slate-200 bg-white rounded-3xl space-y-3">
+            <div className="w-16 h-16 bg-teal-50 text-[#00685f] rounded-full flex items-center justify-center mx-auto shadow-3xs animate-pulse">
+              <span className="material-symbols-outlined text-3xl">calendar_month</span>
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Kalender Jurnal 7 KAIH</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Silakan pilih rombel kelas dan nama siswa terlebih dahulu melalui pilihan di atas untuk memuat kalender pembiasaan harian 7 KAIH murid.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

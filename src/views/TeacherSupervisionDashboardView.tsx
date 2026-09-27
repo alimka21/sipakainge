@@ -7,22 +7,24 @@ interface TeacherSupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenObservationForm?: () => void;
   onOpenFollowUp?: () => void;
+  sessionStates?: Record<string, any>;
 }
 
 export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboardViewProps> = ({
   onNavigate,
   onOpenObservationForm,
   onOpenFollowUp,
+  sessionStates,
 }) => {
-  const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2025/2026');
+  const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2026/2027');
   const [faseFilter, setFaseFilter] = useState<'all' | 'fase-a' | 'fase-b' | 'fase-c' | 'mapel'>('all');
   const [observerFilter, setObserverFilter] = useState<'all' | 'observer_only' | 'regular_only'>('all');
   const [selectedTeacherModal, setSelectedTeacherModal] = useState<TeacherRecord | null>(null);
 
   // Teacher supervision stage completion tracking for all teachers
   // 5 Stages: 1. Pra-Observasi, 2. Telaah Modul, 3. Observasi Kelas, 4. Refleksi Sipakainge, 5. RTL
-  const [teacherStagesMap, setTeacherStagesMap] = useState<
-    Record<
+  const getDynamicTeacherStagesMap = () => {
+    const map: Record<
       string,
       {
         t1: boolean;
@@ -33,17 +35,69 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
         status: 'Tuntas' | 'Dalam Proses' | 'Terjadwal';
         score: string;
       }
-    >
-  >({
-    't-1': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.85 / 4.0' },
-    't-2': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.40 / 4.0' },
-    't-3': { t1: true, t2: true, t3: true, t4: true, t5: false, status: 'Dalam Proses', score: '3.70 / 4.0' },
-    't-4': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.50 / 4.0' },
-    't-5': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.90 / 4.0' },
-    't-6': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.80 / 4.0' },
-    't-7': { t1: true, t2: false, t3: false, t4: false, t5: false, status: 'Terjadwal', score: '3.25 / 4.0' },
-    't-8': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.75 / 4.0' },
-  });
+    > = {
+      't-1': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.85 / 4.0' },
+      't-2': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.40 / 4.0' },
+      't-3': { t1: true, t2: true, t3: true, t4: true, t5: false, status: 'Dalam Proses', score: '3.70 / 4.0' },
+      't-4': { t1: true, t2: true, t3: false, t4: false, t5: false, status: 'Dalam Proses', score: '3.50 / 4.0' },
+      't-5': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.90 / 4.0' },
+      't-6': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.80 / 4.0' },
+      't-7': { t1: true, t2: false, t3: false, t4: false, t5: false, status: 'Terjadwal', score: '3.25 / 4.0' },
+      't-8': { t1: true, t2: true, t3: true, t4: true, t5: true, status: 'Tuntas', score: '3.75 / 4.0' },
+    };
+
+    if (sessionStates) {
+      Object.keys(sessionStates).forEach((teacherId) => {
+        const sess = sessionStates[teacherId];
+        const status = sess.status;
+
+        // Map 12 process states to 5 stages
+        const t1 = !['DRAFT', 'DIAJUKAN', 'PERLU_PENYESUAIAN', 'DITOLAK'].includes(status);
+        const t2 = ['DOKUMEN_DIUPLOAD', 'PERANGKAT_DINILAI', 'OBSERVASI_DILAKUKAN', 'HASIL_SUPERVISI_TERSEDIA', 'REFLEKSI_GURU', 'SELESAI'].includes(status);
+        const t3 = ['OBSERVASI_DILAKUKAN', 'HASIL_SUPERVISI_TERSEDIA', 'REFLEKSI_GURU', 'SELESAI'].includes(status);
+        const t4 = ['REFLEKSI_GURU', 'SELESAI'].includes(status);
+        const t5 = status === 'SELESAI';
+
+        // Count scores
+        let totalScore = 0;
+        let obsAvg = 0;
+        if (sess.scores22) {
+          const vals = Object.values(sess.scores22);
+          if (vals.length > 0) {
+            const totalObs = vals.reduce((a: any, b: any) => a + b, 0) as number;
+            obsAvg = totalObs / vals.length;
+          }
+        } else {
+          // Default fallbacks for realism
+          if (teacherId === 't-1') obsAvg = 3.18;
+          else if (teacherId === 't-3') obsAvg = 2.90;
+          else if (teacherId === 't-4') obsAvg = 3.05;
+          else if (teacherId === 't-5') obsAvg = 4.00;
+          else if (teacherId === 't-6') obsAvg = 3.80;
+          else if (teacherId === 't-8') obsAvg = 3.75;
+        }
+        const scoreStr = obsAvg > 0 ? `${obsAvg.toFixed(2)} / 4.0` : '—';
+
+        let statusStr: 'Tuntas' | 'Dalam Proses' | 'Terjadwal' = 'Terjadwal';
+        if (status === 'SELESAI') statusStr = 'Tuntas';
+        else if (status !== 'DRAFT') statusStr = 'Dalam Proses';
+
+        map[teacherId] = {
+          t1,
+          t2,
+          t3,
+          t4,
+          t5,
+          status: statusStr,
+          score: scoreStr,
+        };
+      });
+    }
+
+    return map;
+  };
+
+  const teacherStagesMap = getDynamicTeacherStagesMap();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -53,28 +107,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   };
 
   const handleToggleStage = (teacherId: string, stageKey: 't1' | 't2' | 't3' | 't4' | 't5') => {
-    setTeacherStagesMap((prev) => {
-      const current = prev[teacherId] || {
-        t1: false,
-        t2: false,
-        t3: false,
-        t4: false,
-        t5: false,
-        status: 'Terjadwal',
-        score: '3.50 / 4.0',
-      };
-      const updatedValue = !current[stageKey];
-      const newRecord = { ...current, [stageKey]: updatedValue };
-
-      // Recompute status
-      const totalDone = [newRecord.t1, newRecord.t2, newRecord.t3, newRecord.t4, newRecord.t5].filter(Boolean).length;
-      if (totalDone === 5) newRecord.status = 'Tuntas';
-      else if (totalDone > 0) newRecord.status = 'Dalam Proses';
-      else newRecord.status = 'Terjadwal';
-
-      showToast(`Status tahap berhasil diperbarui menjadi ${updatedValue ? '✓ Selesai' : 'Belum Selesai'}`);
-      return { ...prev, [teacherId]: newRecord };
-    });
+    showToast('Tinjauan rekapitulasi publik bersifat read-only.');
   };
 
   // Filter teachers
@@ -319,6 +352,30 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
             </div>
           </div>
 
+          {/* Banner Informasi Mode Tinjauan (Read-Only) */}
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 flex items-center justify-between gap-4 text-xs text-indigo-950">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-indigo-700 text-xl shrink-0">
+                visibility
+              </span>
+              <div>
+                <span className="font-bold block">
+                  Mode Rekapitulasi Publik (Hanya Tinjauan / Read-Only):
+                </span>
+                <span className="text-indigo-900/80">
+                  Laman ini berfungsi menampilkan rekap status 5 tahap supervisi klinis. Perubahan data, penilaian rubrik, dan telaah modul hanya dapat dilakukan di Dashboard Manajemen Kepala Sekolah & Guru Observer.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('login')}
+              className="inline-flex items-center gap-1.5 shrink-0 rounded-xl bg-indigo-700 px-3.5 py-1.5 font-bold text-white hover:bg-indigo-800 transition shadow-xs"
+            >
+              <span className="material-symbols-outlined text-sm">login</span>
+              <span>Login Manajemen</span>
+            </button>
+          </div>
+
           {/* TABEL REKAPITULASI PROGRES SUPERVISI SELURUH GURU */}
           <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70">
             <div className="border-b border-slate-100 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -368,7 +425,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                       5. RTL
                     </th>
                     <th className="py-3.5 px-4 text-center min-w-[110px]">Status Capaian</th>
-                    <th className="py-3.5 px-4 text-center min-w-[100px]">Skor Refleksi</th>
+                    <th className="py-3.5 px-4 text-center min-w-[100px]" title="Skor rata-rata dari 22 indikator pelaksanaan KBM Pembelajaran Mendalam">Rerata Skor Obs</th>
                     <th className="py-3.5 px-4 text-center w-24">Aksi</th>
                   </tr>
                 </thead>
@@ -442,87 +499,72 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
 
                         {/* Tahap 1: Pra-Observasi */}
                         <td className="py-3.5 px-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleStage(teacher.id, 't1')}
-                            title="Tahap 1: Pra-Observasi (Klik untuk ubah status)"
-                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-transform hover:scale-110 ${
+                          <span
+                            title={stageRecord.t1 ? 'Tahap 1: Pra-Observasi Selesai' : 'Tahap 1: Pra-Observasi Belum'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t1
                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                : 'bg-slate-100 text-slate-300'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-sm font-bold">
-                              {stageRecord.t1 ? 'check' : 'remove'}
-                            </span>
-                          </button>
+                            {stageRecord.t1 ? '✓' : '—'}
+                          </span>
                         </td>
 
                         {/* Tahap 2: Telaah Modul Ajar */}
                         <td className="py-3.5 px-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleStage(teacher.id, 't2')}
-                            title="Tahap 2: Telaah Modul Ajar (Klik untuk ubah status)"
-                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-transform hover:scale-110 ${
+                          <span
+                            title={stageRecord.t2 ? 'Tahap 2: Telaah Modul Ajar Selesai' : 'Tahap 2: Telaah Modul Ajar Belum'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t2
                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                : 'bg-slate-100 text-slate-300'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-sm font-bold">
-                              {stageRecord.t2 ? 'check' : 'remove'}
-                            </span>
-                          </button>
+                            {stageRecord.t2 ? '✓' : '—'}
+                          </span>
                         </td>
 
                         {/* Tahap 3: Pelaksanaan Observasi Kelas */}
                         <td className="py-3.5 px-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleStage(teacher.id, 't3')}
-                            title="Tahap 3: Observasi Kelas (Klik untuk ubah status)"
-                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-transform hover:scale-110 ${
+                          <span
+                            title={stageRecord.t3 ? 'Tahap 3: Observasi Kelas Selesai' : 'Tahap 3: Observasi Kelas Belum'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t3
                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                : 'bg-slate-100 text-slate-300'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-sm font-bold">
-                              {stageRecord.t3 ? 'check' : 'remove'}
-                            </span>
-                          </button>
+                            {stageRecord.t3 ? '✓' : '—'}
+                          </span>
                         </td>
 
                         {/* Tahap 4: Dialog Reflektif Pasca-Observasi */}
                         <td className="py-3.5 px-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleStage(teacher.id, 't4')}
-                            title="Tahap 4: Refleksi Sipakainge (Klik untuk ubah status)"
-                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-transform hover:scale-110 ${
+                          <span
+                            title={stageRecord.t4 ? 'Tahap 4: Refleksi Sipakainge Selesai' : 'Tahap 4: Refleksi Sipakainge Belum'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t4
                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                : 'bg-slate-100 text-slate-300'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-sm font-bold">
-                              {stageRecord.t4 ? 'check' : 'remove'}
-                            </span>
-                          </button>
+                            {stageRecord.t4 ? '✓' : '—'}
+                          </span>
                         </td>
 
                         {/* Tahap 5: Rencana Tindak Lanjut */}
                         <td className="py-3.5 px-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleStage(teacher.id, 't5')}
-                            title="Tahap 5: RTL (Klik untuk ubah status)"
-                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-transform hover:scale-110 ${
+                          <span
+                            title={stageRecord.t5 ? 'Tahap 5: RTL Selesai' : 'Tahap 5: RTL Belum'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
                               stageRecord.t5
                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                : 'bg-slate-100 text-slate-300'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-sm font-bold">
-                              {stageRecord.t5 ? 'check' : 'remove'}
-                            </span>
-                          </button>
+                            {stageRecord.t5 ? '✓' : '—'}
+                          </span>
                         </td>
 
                         {/* Status Capaian */}

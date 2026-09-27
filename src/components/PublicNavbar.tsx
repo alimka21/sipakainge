@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types';
+import { SchoolLogo } from './SchoolLogo';
 
 interface PublicNavbarProps {
   currentScreen: ScreenId;
@@ -28,11 +29,12 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentScreen, onNav
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-white/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-slate-100">
       <div className="h-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 flex items-center justify-between gap-4">
-        {/* Brand Text Identity (Tanpa Logo sesuai arahan) */}
+        {/* Brand Text Identity dengan Logo Sekolah */}
         <div
           onClick={() => handleNavClick('landing')}
-          className="flex items-center cursor-pointer group"
+          className="flex items-center gap-3 cursor-pointer group"
         >
+          <SchoolLogo className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-white shadow-xs p-0.5 ring-1 ring-teal-600/30 shrink-0 group-hover:scale-105 transition-transform" />
           <div className="flex flex-col">
             <span className="text-xl font-black tracking-tight text-[#00685f] group-hover:text-[#008378] transition-colors">
               SIPAKAINGE
@@ -43,7 +45,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentScreen, onNav
           </div>
         </div>
 
-        {/* Desktop Navigation Links — Bersih & Tanpa Teks Publik */}
+        {/* Desktop Navigation Links — Bersih & Tanpa Teks Publik / Tanpa Icon Rekap */}
         <nav className="hidden lg:flex items-center gap-1.5">
           <button
             onClick={() => handleNavClick('landing', '#beranda')}
@@ -58,27 +60,25 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentScreen, onNav
 
           <button
             onClick={() => handleNavClick('student_dashboard')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
               currentScreen === 'student_dashboard'
                 ? 'bg-[#00685f] text-white shadow-sm'
                 : 'text-slate-600 hover:text-[#00685f] hover:bg-[#eff4ff]'
             }`}
             title="Rekapan Pembiasaan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH) Murid"
           >
-            <span className="material-symbols-outlined text-base">diversity_1</span>
             <span>Rekap 7 KAIH (Murid)</span>
           </button>
 
           <button
             onClick={() => handleNavClick('teacher_dashboard')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
               currentScreen === 'teacher_dashboard'
                 ? 'bg-[#00685f] text-white shadow-sm'
                 : 'text-slate-600 hover:text-[#00685f] hover:bg-[#eff4ff]'
             }`}
             title="Rekapan Siklus Supervisi Klinis Guru (1 Semester 1 Kali)"
           >
-            <span className="material-symbols-outlined text-base">school</span>
             <span>Rekap Supervisi (Guru)</span>
           </button>
 
@@ -135,20 +135,18 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentScreen, onNav
           </button>
           <button
             onClick={() => handleNavClick('student_dashboard')}
-            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-semibold ${
               currentScreen === 'student_dashboard' ? 'bg-[#00685f] text-white' : 'text-slate-700 hover:bg-slate-50'
             }`}
           >
-            <span className="material-symbols-outlined text-base">diversity_1</span>
             Rekap 7 KAIH (Murid)
           </button>
           <button
             onClick={() => handleNavClick('teacher_dashboard')}
-            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+            className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-semibold ${
               currentScreen === 'teacher_dashboard' ? 'bg-[#00685f] text-white' : 'text-slate-700 hover:bg-slate-50'
             }`}
           >
-            <span className="material-symbols-outlined text-base">school</span>
             Rekap Supervisi (Guru)
           </button>
           <button

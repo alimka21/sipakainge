@@ -1,28 +1,63 @@
 import React, { useState } from 'react';
-import { ScreenId } from '../types';
-import { APP_ASSETS, HABIT_LIST } from '../data/mockData';
+import { ScreenId, MuridRecord } from '../types';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID } from '../data/mockData';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
   onDownloadReport: () => void;
+  userRole?: string;
+  muridList?: MuridRecord[];
 }
 
 export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   onNavigate,
   onDownloadReport,
+  userRole = 'orang_tua',
+  muridList = INITIAL_MURID,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'radar' | 'habits' | 'academic' | 'artifacts' | 'awards'
   >('radar');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [selectedClass, setSelectedClass] = useState<string>(
+    userRole === 'kepala_sekolah' ? '' : 'Kelas IV-A'
+  );
+  const [selectedMuridId, setSelectedMuridId] = useState<string>(
+    userRole === 'kepala_sekolah' ? '' : 'm-4a-1'
+  );
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Academic grades
+  const isKS = userRole === 'kepala_sekolah';
+
+  // Filter students based on selected class
+  const classMuridList = muridList.filter(m => !selectedClass || m.rombel === selectedClass);
+  const activeMurid = selectedMuridId 
+    ? muridList.find(m => m.id === selectedMuridId)
+    : (isKS ? undefined : classMuridList[0] || muridList[0]);
+
+  // Academic grades (Dynamic Merger)
+  const activeAcademics = (activeMurid && (activeMurid as any).academics) 
+    ? Object.values((activeMurid as any).academics).map((ac: any) => {
+        const s = ac.score;
+        const pred = s >= 90 ? 'Amat Baik' : s >= 80 ? 'Baik' : s >= 70 ? 'Cukup' : 'Perlu Pendampingan';
+        return {
+          code: ac.subject.substring(0, 4).toUpperCase(),
+          name: ac.subject,
+          score: s,
+          predicate: pred,
+          desc: `Evaluasi Kompetensi Mandiri: ${ac.tasks.map((tk: any) => `${tk.taskName} (Nilai: ${tk.score})`).join(', ')}.`,
+          trend: 'Live • Input Guru',
+        };
+      })
+    : [];
+
   const academicSubjects = [
+    ...activeAcademics,
     {
       code: 'IPAS',
       name: 'Ilmu Pengetahuan Alam & Sosial',
@@ -73,8 +108,21 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
     },
   ];
 
-  // Artifacts
+  // Artifacts (Dynamic Merger)
+  const activeArtifacts = (activeMurid && (activeMurid as any).portfolios)
+    ? (activeMurid as any).portfolios.map((art: any) => ({
+        id: art.id,
+        title: art.title,
+        category: art.category,
+        date: art.date,
+        image: art.imageUrl || APP_ASSETS.artPosterWater,
+        description: art.description,
+        appreciation: art.feedback || 'Praktik baik diunggah oleh Guru Kelas',
+      }))
+    : [];
+
   const artifacts = [
+    ...activeArtifacts,
     {
       id: 'art-1',
       title: 'Poster Kampanye: "Hemat Air, Jaga Bumi Kita"',
@@ -97,8 +145,20 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
     },
   ];
 
-  // Awards
+  // Awards (Dynamic Merger)
+  const activeAwards = (activeMurid && (activeMurid as any).achievements)
+    ? (activeMurid as any).achievements.map((aw: any) => ({
+        id: aw.id,
+        title: aw.title,
+        organizer: aw.description || 'Pemberi Apresiasi: Sekolah',
+        date: aw.date,
+        level: aw.category,
+        badge: 'gold',
+      }))
+    : [];
+
   const awards = [
+    ...activeAwards,
     {
       id: 'aw-1',
       title: 'Juara I Lomba Eksperimen Sains Cilik Tingkat Gugus III Makassar',
@@ -117,7 +177,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
     },
     {
       id: 'aw-3',
-      title: 'Penghargaan Siswa Terdisiplin & Gotong Royong Semester Ganjil',
+      title: 'Penghargaan Murid Terdisiplin & Gotong Royong Semester Ganjil',
       organizer: 'Wali Kelas IV-A',
       date: 'September 2025',
       level: 'Kelas',
@@ -151,7 +211,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
             <span className="text-slate-300">/</span>
             <span className="text-teal-700 font-semibold flex items-center gap-1">
               <span className="material-symbols-outlined text-base">badge</span>
-              Portofolio & Profil Holistik Siswa
+              Portofolio & Profil Holistik Murid
             </span>
           </div>
 
@@ -175,104 +235,160 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
-        {/* Child Profile Bento Card */}
-        <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-sm ring-1 ring-slate-200/70">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-              <div className="relative">
-                <img
-                  src={APP_ASSETS.studentAhmad}
-                  alt="Ahmad Faris"
-                  className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover ring-4 ring-teal-100 shadow-md"
-                />
-                <span
-                  className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md ring-2 ring-white"
-                  title="Terverifikasi Dapodik"
+        {/* SELECTOR FOR TEACHERS AND PRINCIPALS */}
+        {(userRole === 'kepala_sekolah' || userRole === 'guru') && (
+          <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <h2 className="text-sm font-bold text-slate-950 flex items-center gap-2">
+              <span className="material-symbols-outlined text-teal-800 text-lg">person_search</span>
+              <span>Pilih Kelas & Siswa untuk Menampilkan Profil / Portofolio</span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Rombel / Kelas:</label>
+                <select
+                  value={selectedClass}
+                  onChange={(e) => {
+                    setSelectedClass(e.target.value);
+                    setSelectedMuridId('');
+                  }}
+                  disabled={userRole === 'guru'} // Guru is locked to Kelas IV-A
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-75"
                 >
-                  <span className="material-symbols-outlined text-lg">verified</span>
+                  <option value="">-- Pilih Kelas --</option>
+                  <option value="Kelas I-B">Kelas I-B</option>
+                  <option value="Kelas III-A">Kelas III-A</option>
+                  <option value="Kelas IV-A">Kelas IV-A</option>
+                  <option value="Kelas V-B">Kelas V-B</option>
+                  <option value="Kelas VI-C">Kelas VI-C</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Nama Siswa:</label>
+                <select
+                  value={selectedMuridId}
+                  onChange={(e) => setSelectedMuridId(e.target.value)}
+                  disabled={!selectedClass}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 disabled:opacity-50"
+                >
+                  <option value="">-- Pilih Siswa --</option>
+                  {classMuridList.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} (NISN: {m.nisn})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeMurid ? (
+          <>
+            {/* Child Profile Bento Card */}
+            <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-sm ring-1 ring-slate-200/70">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                  <div className="relative">
+                    <img
+                      src={activeMurid.avatar || APP_ASSETS.studentAhmad}
+                      alt={activeMurid.name}
+                      className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover ring-4 ring-teal-100 shadow-md"
+                    />
+                    <span
+                      className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md ring-2 ring-white"
+                      title="Terverifikasi Dapodik"
+                    >
+                      <span className="material-symbols-outlined text-lg">verified</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800 ring-1 ring-teal-600/20">
+                        {activeMurid.rombel} • {activeMurid.fase === 'fase-c' ? 'Fase C' : 'Fase B'}
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-600/20">
+                        Dapodik Terverifikasi RI
+                      </span>
+                      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
+                        Tahun Ajaran 2026/2027
+                      </span>
+                    </div>
+
+                    <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-serif">
+                      {activeMurid.name}
+                    </h1>
+
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-xs text-slate-500">
+                      <div>
+                        <span className="font-semibold text-slate-400 block">NISN / NIS:</span>
+                        <span className="font-bold text-slate-700">{activeMurid.nisn} / {activeMurid.nis}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400 block">Tempat, Tgl Lahir:</span>
+                        <span className="font-bold text-slate-700">
+                          {activeMurid.id === 'm-4a-2' ? 'Makassar, 22 April 2015' : 'Makassar, 14 Mei 2015'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400 block">Wali Kelas:</span>
+                        <span className="font-bold text-slate-700">
+                          {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400 block">Sekolah:</span>
+                        <span className="font-bold text-slate-700">SD Percontohan PAM</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Holistic Stats */}
+                <div className="flex flex-row lg:flex-col gap-3 shrink-0">
+                  <div className="flex items-center gap-3 rounded-2xl bg-teal-50/70 p-3.5 ring-1 ring-teal-600/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
+                      {activeMurid.id === 'm-4a-2' ? '94.8' : '92.2'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-teal-900">Rerata Nilai Rapor</p>
+                      <p className="text-[11px] text-teal-700">Predikat: Amat Baik (A)</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3.5 ring-1 ring-emerald-600/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white font-bold">
+                      {activeMurid.id === 'm-4a-2' ? '100%' : '94.6%'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-900">7 KAIH Anak</p>
+                      <p className="text-[11px] text-emerald-700">Tingkat Konsistensi</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Teacher Holistic Narration Banner */}
+              <div className="mt-6 rounded-2xl bg-gradient-to-r from-teal-50 via-slate-50 to-emerald-50 p-4 ring-1 ring-teal-200/60 flex items-start gap-3">
+                <span className="material-symbols-outlined text-teal-700 text-2xl shrink-0 mt-0.5">
+                  format_quote
                 </span>
-              </div>
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800 ring-1 ring-teal-600/20">
-                    Kelas IV-A • Fase B
-                  </span>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-600/20">
-                    Dapodik Terverifikasi RI
-                  </span>
-                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
-                    Tahun Ajaran 2025/2026
-                  </span>
-                </div>
-
-                <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-serif">
-                  Ahmad Faris Al-Fatih
-                </h1>
-
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-xs text-slate-500">
-                  <div>
-                    <span className="font-semibold text-slate-400 block">NISN / NIS:</span>
-                    <span className="font-bold text-slate-700">0129384756 / 202204018</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400 block">Tempat, Tgl Lahir:</span>
-                    <span className="font-bold text-slate-700">Makassar, 14 Mei 2015</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400 block">Wali Kelas:</span>
-                    <span className="font-bold text-slate-700">Ibu Siti Aminah, S.Pd.</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400 block">Sekolah:</span>
-                    <span className="font-bold text-slate-700">SD Percontohan PAM</span>
-                  </div>
+                <div className="text-xs text-slate-700">
+                  <p className="font-bold text-teal-950 mb-1">
+                    Refleksi & Catatan Guru Kelas {activeMurid.rombel} (
+                    {activeMurid.rombel === 'Kelas V-B' ? 'Bpk. Bambang Irawan, S.Pd.' : 'Ibu Siti Aminah, S.Pd.'}):
+                  </p>
+                  <p className="italic leading-relaxed text-slate-600">
+                    {activeMurid.id === 'm-4a-2' ? (
+                      `"Andi Siti Nurhaliza menunjukkan minat yang sangat kuat pada bidang sosial dan bahasa. Ia sangat disiplin, sopan (menerapkan nilai Sipakatau), dan selalu menyelesaikan seluruh pembiasaan karakter dengan konsisten baik di rumah maupun di sekolah."`
+                    ) : (
+                      `"Ahmad adalah teladan dalam rasa ingin tahu dan keberanian bereksplorasi sains. Ia memiliki kecerdasan sosial yang tinggi dalam memimpin diskusi kelompok, berempati terhadap teman sebaya, serta menunjukkan kedisiplinan beribadah dan gemar membaca yang sangat konsisten baik di kelas maupun di rumah."`
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
-
-            {/* Quick Holistic Stats */}
-            <div className="flex flex-row lg:flex-col gap-3 shrink-0">
-              <div className="flex items-center gap-3 rounded-2xl bg-teal-50/70 p-3.5 ring-1 ring-teal-600/10">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
-                  92.2
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-teal-900">Rerata Nilai Rapor</p>
-                  <p className="text-[11px] text-teal-700">Predikat: Amat Baik (A)</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3.5 ring-1 ring-emerald-600/10">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white font-bold">
-                  94.6%
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-emerald-900">7 KAIH Anak</p>
-                  <p className="text-[11px] text-emerald-700">Tingkat Konsistensi</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Teacher Holistic Narration Banner */}
-          <div className="mt-6 rounded-2xl bg-gradient-to-r from-teal-50 via-slate-50 to-emerald-50 p-4 ring-1 ring-teal-200/60 flex items-start gap-3">
-            <span className="material-symbols-outlined text-teal-700 text-2xl shrink-0 mt-0.5">
-              format_quote
-            </span>
-            <div className="text-xs text-slate-700">
-              <p className="font-bold text-teal-950 mb-1">
-                Refleksi & Catatan Guru Kelas IV-A (Ibu Siti Aminah, S.Pd.):
-              </p>
-              <p className="italic leading-relaxed text-slate-600">
-                "Ahmad adalah teladan dalam rasa ingin tahu dan keberanian bereksplorasi sains. Ia
-                memiliki kecerdasan sosial yang tinggi dalam memimpin diskusi kelompok, berempati
-                terhadap teman sebaya, serta menunjukkan kedisiplinan beribadah dan gemar membaca
-                yang sangat konsisten baik di kelas maupun di rumah."
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Tab Navigation */}
         <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
@@ -280,7 +396,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
             { id: 'radar', label: 'Ringkasan & Radar Karakter', icon: 'radar' },
             { id: 'habits', label: '7 Kebiasaan Anak Hebat (7 KAIH)', icon: 'verified' },
             { id: 'academic', label: 'Capaian Akademik & TP', icon: 'school' },
-            { id: 'artifacts', label: 'Karya & Portofolio Siswa', icon: 'draw' },
+            { id: 'artifacts', label: 'Karya & Portofolio Murid', icon: 'draw' },
             { id: 'awards', label: 'Prestasi & Apresiasi', icon: 'emoji_events' },
           ].map((t) => (
             <button
@@ -568,14 +684,14 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
           </div>
         )}
 
-        {/* Tab 4: Karya & Portofolio Siswa */}
+        {/* Tab 4: Karya & Portofolio Murid */}
         {activeTab === 'artifacts' && (
           <div className="mt-6 space-y-6">
             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
-                    Galeri Karya & Praktik Baik Siswa
+                    Galeri Karya & Praktik Baik Murid
                   </h3>
                   <p className="text-xs text-slate-500">
                     Dokumentasi hasil karya otentik Ahmad dalam pembelajaran berbasis proyek (PjBL)
@@ -670,6 +786,18 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                 ))}
               </div>
             </div>
+          </div>
+        )}
+          </>
+        ) : (
+          <div className="text-center p-12 border border-dashed border-slate-200 bg-white rounded-3xl space-y-3">
+            <div className="w-16 h-16 bg-teal-50 text-[#00685f] rounded-full flex items-center justify-center mx-auto shadow-3xs animate-pulse">
+              <span className="material-symbols-outlined text-3xl">badge</span>
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Portofolio & Profil Murid</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Silakan pilih rombel kelas dan nama siswa terlebih dahulu melalui pilihan di atas untuk memuat profil dan berkas portofolio holistik murid.
+            </p>
           </div>
         )}
       </div>
