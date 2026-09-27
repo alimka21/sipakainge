@@ -1,0 +1,6 @@
+{
+  "name": "SIPAKAINGE - UPT SPF SDN Percontohan PAM",
+  "description": "Sistem Terpadu Supervisi Pembelajaran Kolaboratif Berbasis Data, Asesmen, Refleksi, dan Pemantauan Karakter 7 Kebiasaan Anak Indonesia Hebat (7 KAIH).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
