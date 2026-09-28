@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
-import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
+import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs } from '../lib/supervisionStateMachine';
 
 interface ObservationFormViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -310,7 +310,12 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
               <button
                 key={st.num}
                 onClick={() => {
-                  // Admin or Supervisor can jump tabs to inspect, Guru can view only if unlocked
+                  // idx 5 = Refleksi, 6 = Penguatan, 7 = Selesai — all require
+                  // Penilaian/Telaah Administrasi/Observasi to be fully scored first.
+                  if (idx >= 5 && !canStartReflection(activeSession)) {
+                    triggerToast(describeMissingReflectionPrereqs(activeSession));
+                    return;
+                  }
                   setActiveStepTab(idx);
                   triggerToast(`Membuka panel langkah: ${st.title}`);
                 }}
@@ -1045,7 +1050,19 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
           {/* ======================================================== */}
           {/* STEP 6: REFLEKSI GURU (TAHAP 6 - GURU WAJIB MENGISI)       */}
           {/* ======================================================== */}
-          {activeStepTab === 5 && (
+          {activeStepTab === 5 && !canStartReflection(activeSession) && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-600">lock</span>
+                <h3 className="text-sm font-bold text-slate-900">Refleksi Belum Terbuka</h3>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {describeMissingReflectionPrereqs(activeSession)}
+              </p>
+            </div>
+          )}
+
+          {activeStepTab === 5 && canStartReflection(activeSession) && (
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">

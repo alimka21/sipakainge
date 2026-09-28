@@ -520,6 +520,63 @@ as PDF") produces the report.
   produced; visually confirm in-browser before relying on this for a real
   printed report.
 
+## Refleksi data-completeness gate (since 2026-09-28) — `src/lib/supervisionStateMachine.ts`
+Before this, the "Kemajuan Siklus Supervisi Digital (8 Tahap Linier)" stepper
+in `ObservationFormView.tsx` (heading at the top of the workflow card) let
+anyone click straight to the Refleksi tab (or Penguatan/Selesai) from a brand
+new `DRAFT` session — `canTransition`/`SUPERVISION_TRANSITIONS` only ever
+validated the `status` enum, never whether the prerequisite stages actually
+had real data (Step 5 "Selesaikan Pengamatan Kelas" even auto-fills unscored
+`scores22` items with a default of `3`, so a status transition alone proves
+nothing about completeness).
+- New pure functions in `supervisionStateMachine.ts`: `isPenilaianComplete`
+  (all 17 `scores17` entries present), `isTelaahAdministrasiComplete` (all 14
+  `aspectStatus14` entries present), `isObservasiComplete` (all 22 `scores22`
+  entries present), `canStartReflection` (all three), and
+  `describeMissingReflectionPrereqs` (toast-ready Indonesian message listing
+  what's missing). The 17/14/22 counts aren't redefined here — they match the
+  existing `DOKUMEN_KELENGKAPAN_ITEMS`/`TELAAH_MENDALAM_ITEMS`/
+  `OBSERVASI_MENDALAM_ITEMS` arrays in `ObservationFormView.tsx`, which the
+  field names `scores17`/`aspectStatus14`/`scores22` already bake in.
+- Wired into `ObservationFormView.tsx` only (the view with the actual
+  "Kemajuan Siklus Supervisi Digital" stepper): the stepper's tab-click
+  handler now blocks jumping to idx 5/6/7 (Refleksi/Penguatan/Selesai) with a
+  toast when `!canStartReflection(activeSession)`; the Refleksi tab body
+  itself is now split into two mutually-exclusive blocks — a "Refleksi Belum
+  Terbuka" locked card when incomplete, the real 6-question form (unchanged)
+  when complete — so even landing on that tab via the status-driven
+  `useEffect` auto-sync can't show/edit reflection fields early.
+- **Deliberately NOT wired into `TeacherSelfSupervisionView.tsx`** (the
+  parallel guru-facing simulator view, `[Simulasikan ...]` buttons) — its
+  simulate-buttons never populate `scores17`/`aspectStatus14`/`scores22` at
+  all, so applying the same gate there would permanently lock its Refleksi
+  tab and break the simulator's own demo flow. That view isn't the one the
+  user's request named ("Kemajuan Siklus Supervisi Digital (8 Tahap
+  Linier)" is `ObservationFormView.tsx`'s own heading, verbatim); its
+  existing status-only gate (`OBSERVASI_DILAKUKAN`/`HASIL_SUPERVISI_TERSEDIA`)
+  was left as-is.
+- The final PDF gate (`TeacherSupervisionReportView.tsx`'s `isFinished =
+  status === 'SELESAI'`) needed no change — `SELESAI` is only reachable via
+  `REFLEKSI_GURU`, which is now transitively unreachable until
+  `canStartReflection` is true, so "print a supervision report" already
+  implies the full penilaian/telaah/observasi/refleksi chain happened.
+
+## Signature blocks in printed reports (since 2026-09-28)
+- `TeacherSupervisionReportView.tsx` already had a print-only 2-column
+  signature block at the very end ("Guru yang Disupervisi" / "Kepala Sekolah
+  / Supervisor") — this already satisfied "TTD Kepala Sekolah at the end",
+  no change needed there.
+- `ParentPortfolioView.tsx` had no signature block at all. Added one
+  (`hidden print:grid`, same 2-column pattern) as the last element before the
+  closing `</>` of the `activeMurid`-truthy branch: **"Wali Kelas"** (via the
+  existing `getWaliKelasName(activeMurid.rombel, rombelList, teacherList)`
+  helper, already imported/used elsewhere in this file) and **"Kepala
+  Sekolah"** (the `PRINCIPAL_NAME` constant from `mockData.ts`, newly
+  imported into this file). Falls back to `'-'` for wali kelas when no
+  `activeMurid` is selected (can't happen in practice since the block only
+  renders inside the `activeMurid &&` branch, but kept for type-safety
+  symmetry with the rest of the file).
+
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai
   Akademik, Karya & Portofolio, Prestasi) reusing `ClassHabitsInputView`

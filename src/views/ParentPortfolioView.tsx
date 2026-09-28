@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
-import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 import { formatWitaDateTime } from '../lib/time';
 
@@ -809,6 +809,20 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Print-only signature block */}
+          <div className="hidden print:grid grid-cols-2 gap-8 pt-10 text-xs">
+            <div className="text-center space-y-16">
+              <p>Wali Kelas,</p>
+              <p className="font-bold border-t border-slate-800 pt-1 inline-block px-6">
+                {activeMurid ? getWaliKelasName(activeMurid.rombel, rombelList, teacherList) : '-'}
+              </p>
+            </div>
+            <div className="text-center space-y-16">
+              <p>Kepala Sekolah,</p>
+              <p className="font-bold border-t border-slate-800 pt-1 inline-block px-6">{PRINCIPAL_NAME}</p>
             </div>
           </div>
           </>

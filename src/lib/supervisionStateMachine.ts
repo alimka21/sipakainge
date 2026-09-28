@@ -1,4 +1,4 @@
-import { SupervisionStatus } from '../types';
+import { SupervisionSession, SupervisionStatus } from '../types';
 
 /**
  * Every transition the app actually performs today, from a full audit
@@ -57,6 +57,47 @@ export function describeBlockedTransition(from: SupervisionStatus, to: Supervisi
  * existing call sites is a follow-up, not done in this pass.
  */
 export type SupervisionStage = 'belum_mulai' | 'diajukan' | 'dijadwalkan' | 'diobservasi' | 'refleksi' | 'tuntas';
+
+/**
+ * Data-completeness gate for entering the Refleksi (self-reflection) stage.
+ * Before this (2026-09-28), the 8-stage stepper in `ObservationFormView.tsx`
+ * let anyone click straight to the Refleksi tab regardless of whether
+ * Penilaian/Telaah Administrasi/Observasi had any real data — `canTransition`
+ * above only checks the `status` enum, never the score fields themselves, and
+ * the stepper's tab-click handler didn't call it at all. These three checks
+ * are the field-completeness half of that gate: all 17 "Kelengkapan
+ * Perangkat" items scored (`scores17`), all 14 "Telaah Mendalam" items
+ * assessed (`aspectStatus14`), and all 22 classroom-observation indicators
+ * scored (`scores22`) — counts match `DOKUMEN_KELENGKAPAN_ITEMS`,
+ * `TELAAH_MENDALAM_ITEMS`, `OBSERVASI_MENDALAM_ITEMS` in
+ * `ObservationFormView.tsx` (17/14/22 are baked into the field names
+ * `scores17`/`aspectStatus14`/`scores22` themselves, not redefined here).
+ */
+export function isPenilaianComplete(session: SupervisionSession): boolean {
+  return Object.keys(session.scores17 ?? {}).length >= 17;
+}
+
+export function isTelaahAdministrasiComplete(session: SupervisionSession): boolean {
+  return Object.keys(session.aspectStatus14 ?? {}).length >= 14;
+}
+
+export function isObservasiComplete(session: SupervisionSession): boolean {
+  return Object.keys(session.scores22 ?? {}).length >= 22;
+}
+
+/** All three prerequisite stages must be fully scored before Refleksi opens. */
+export function canStartReflection(session: SupervisionSession): boolean {
+  return isPenilaianComplete(session) && isTelaahAdministrasiComplete(session) && isObservasiComplete(session);
+}
+
+/** Toast/inline message listing which of the three prerequisite stages are still missing. */
+export function describeMissingReflectionPrereqs(session: SupervisionSession): string {
+  const missing: string[] = [];
+  if (!isPenilaianComplete(session)) missing.push('Penilaian (Kelengkapan Perangkat)');
+  if (!isTelaahAdministrasiComplete(session)) missing.push('Telaah Administrasi (Telaah Mendalam)');
+  if (!isObservasiComplete(session)) missing.push('Observasi Kelas');
+  return `Lengkapi dulu: ${missing.join(', ')} — sebelum bisa mengisi Refleksi.`;
+}
 
 export const STATUS_STAGE: Record<SupervisionStatus, SupervisionStage> = {
   DRAFT: 'belum_mulai',
