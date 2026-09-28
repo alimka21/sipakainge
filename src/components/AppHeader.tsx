@@ -6,8 +6,6 @@ interface AppHeaderProps {
   userRole: UserRole;
   onSwitchRole: (role: UserRole) => void;
   onNavigate: (screen: ScreenId) => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   principalPhotoUrl?: string;
@@ -20,8 +18,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   userRole,
   onSwitchRole,
   onNavigate,
-  searchQuery,
-  onSearchChange,
   isSidebarCollapsed,
   onToggleSidebar,
   principalPhotoUrl,
@@ -67,17 +63,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <span className="text-xs text-slate-500 font-medium hidden md:inline">
               Semester Ganjil TA 2026/2027
             </span>
-          </div>
-
-          <div className="hidden xl:flex items-center bg-[#f1f5f9] px-3 py-1.5 rounded-xl w-64 text-slate-500 border border-transparent focus-within:border-teal-600 focus-within:bg-white transition-all">
-            <span className="material-symbols-outlined text-base mr-2 text-slate-400">search</span>
-            <input
-              type="text"
-              placeholder="Cari guru, murid, dokumen..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none w-full text-slate-800 placeholder:text-slate-400"
-            />
           </div>
         </div>
 

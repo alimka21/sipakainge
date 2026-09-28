@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, MuridRecord, PrayerTimesChecklist, UserRole, RombelRecord } from '../types';
 import { INITIAL_MURID, HABIT_LIST, INITIAL_ROMBEL } from '../data/mockData';
+import { formatWitaDate, formatWitaDateTime } from '../lib/time';
 import { getGuruClass } from '../lib/access';
 
 type WorkspaceTab = 'habits' | 'academics' | 'portfolios' | 'awards' | 'attendance';
@@ -45,7 +46,14 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     userRole === 'kepala_sekolah' ? '' : currentTeacher.assignedClass
   );
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState<string>('25 September 2026 (Hari Ini)');
+  const [selectedDate, setSelectedDate] = useState<string>(() => formatWitaDateTime());
+
+  // Keep the displayed/recorded date & time live and accurate to WITA (Asia/Makassar),
+  // instead of a fixed string that goes stale the moment the page is opened.
+  useEffect(() => {
+    const timer = setInterval(() => setSelectedDate(formatWitaDateTime()), 30000);
+    return () => clearInterval(timer);
+  }, []);
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [guruNote, setGuruNote] = useState<string>(
     'Ananda sangat disiplin mengikuti sholat dhuha berjamaah dan aktif membaca buku cerita di pojok baca kelas.'
@@ -153,7 +161,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
       id: `p-${Date.now()}`,
       title: portfolioTitle,
       category: portfolioCategory,
-      date: '25 September 2026',
+      date: formatWitaDate(),
       description: portfolioDescription,
       feedback: portfolioFeedback || 'Karya luar biasa yang terdokumentasi dengan baik.',
     };
@@ -196,7 +204,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
       id: `aw-${Date.now()}`,
       title: awardTitle,
       category: awardCategory,
-      date: 'September 2026',
+      date: formatWitaDate(),
       description: awardDescription,
     };
 

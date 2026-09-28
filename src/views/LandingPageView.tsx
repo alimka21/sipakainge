@@ -7,9 +7,16 @@ import { SchoolLogo } from '../components/SchoolLogo';
 interface LandingPageViewProps {
   onNavigate: (screen: ScreenId) => void;
   principalPhotoUrl?: string;
+  totalMurid?: number;
+  totalGuru?: number;
 }
 
-export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate, principalPhotoUrl }) => {
+export const LandingPageView: React.FC<LandingPageViewProps> = ({
+  onNavigate,
+  principalPhotoUrl,
+  totalMurid = 0,
+  totalGuru = 0,
+}) => {
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col">
       {/* Top Navigation Bar — Reusable Public Navbar */}
@@ -365,7 +372,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate, pr
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-slate-900">Rerata Kepatuhan Bulan Ini</span>
-                  <span className="text-[11px] text-slate-500">Terverifikasi oleh 842 orang tua murid</span>
+                  <span className="text-[11px] text-slate-500">Terverifikasi oleh {totalMurid} orang tua murid</span>
                 </div>
               </div>
             </div>
@@ -572,12 +579,12 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onNavigate, pr
             <div className="p-8 sm:p-12 rounded-3xl bg-[#00685f] text-white shadow-xl mb-16">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl lg:text-5xl font-extrabold text-[#89f5e7] tabular-nums">842+</span>
+                  <span className="text-4xl lg:text-5xl font-extrabold text-[#89f5e7] tabular-nums">{totalMurid}</span>
                   <span className="text-sm font-semibold mt-2">Peserta Didik Aktif</span>
                   <span className="text-xs text-white/80 mt-0.5">Terpantau kebiasaan karakternya</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl lg:text-5xl font-extrabold text-[#6ffbbe] tabular-nums">54</span>
+                  <span className="text-4xl lg:text-5xl font-extrabold text-[#6ffbbe] tabular-nums">{totalGuru}</span>
                   <span className="text-sm font-semibold mt-2">Pendidik & Tendik</span>
                   <span className="text-xs text-white/80 mt-0.5">Bersertifikasi refleksi supervisi</span>
                 </div>

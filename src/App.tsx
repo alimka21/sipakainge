@@ -33,7 +33,6 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('landing');
   const [userRole, setUserRole] = useState<UserRole>('kepala_sekolah');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isBeritaAcaraOpen, setIsBeritaAcaraOpen] = useState<boolean>(false);
   const [isQuickRecordOpen, setIsQuickRecordOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -124,7 +123,12 @@ export default function App() {
         // Dedicated Public Standalone Views (No private sidebar)
         <div>
           {currentScreen === 'landing' && (
-            <LandingPageView onNavigate={handleNavigate} principalPhotoUrl={principalPhoto} />
+            <LandingPageView
+              onNavigate={handleNavigate}
+              principalPhotoUrl={principalPhoto}
+              totalMurid={muridList.length}
+              totalGuru={teachersList.length}
+            />
           )}
           {currentScreen === 'student_dashboard' &&
             (muridList.length > 0 ? (
@@ -214,8 +218,6 @@ export default function App() {
               userRole={userRole}
               onSwitchRole={handleRoleChange}
               onNavigate={handleNavigate}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
               isSidebarCollapsed={isSidebarCollapsed}
               onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               principalPhotoUrl={principalPhoto}
@@ -234,7 +236,6 @@ export default function App() {
                     setSelectedTeacherId(id);
                     handleNavigate('observation_form');
                   }}
-                  searchQuery={searchQuery}
                   sessionStates={sessionStates}
                   onUpdateSessionStates={setSessionStates}
                   teacherList={teachersList}

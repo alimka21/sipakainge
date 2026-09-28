@@ -235,9 +235,46 @@ whenever you learn something new or change a pattern described here.
   TeacherSelfSupervisionView, StudentProgressDashboardView, QuickRecordModal
   via `muridOptions`). The `INITIAL_*` defaults on those props are only
   fallbacks.
+- Global header search (`AppHeader.tsx`, `searchQuery`/`onSearchChange`)
+  removed 2026-09-28 — it was the one search box shared by all three roles
+  (kepala_sekolah, guru, orang_tua) but only ever filtered
+  `SupervisionDashboardView`'s teacher table, which now uses its own
+  `localSearch` state instead. Page-specific search boxes (Dashboard KS "Cari
+  nama guru/NIP", `UserManagementView` guru/murid tables, `ClassHabitsInputView`
+  "Cari nama atau NISN" student picker) were intentionally left — they're
+  tools on one specific page, not a feature shared across all three roles.
+- `LandingPageView.tsx` no longer hardcodes school headcounts. `totalMurid`
+  and `totalGuru` props (from `App.tsx`: `muridList.length` /
+  `teachersList.length`, same numbers `UserManagementView` shows the Kepala
+  Sekolah) feed "Peserta Didik Aktif", "Pendidik & Tendik", and "Terverifikasi
+  oleh N orang tua murid". Habit-compliance percentages elsewhere on the page
+  (92.8%, "96% Tercapai", etc.) are illustrative framework copy with no real
+  aggregate computed anywhere to source from — left as-is; only counts that
+  have a real, known number (murid/guru headcount) were wired up.
 - Regression check: SSR smoke test (renderToString of every screen × role,
   empty data and 1 guru + 1 murid, flags crashes / "NaN" / old sample names /
   fake scores). Bundled with esbuild in the scratchpad; not committed.
+
+## Time — `src/lib/time.ts`
+- WITA (Asia/Makassar, UTC+8) must always be computed with an explicit
+  `timeZone`, never assumed from the server/browser's local clock.
+  `formatWitaDate`/`formatWitaTime`/`formatWitaDateTime`/`witaDateKey` are the
+  only place that does this — use them instead of a bare `new Date()... id-ID`
+  or (worse) a hardcoded string literal.
+- `formatWitaTime` deliberately formats with `en-GB` (colon `14:35`) even
+  though the rest of the string is Indonesian — `id-ID`'s default time
+  punctuation is a period (`14.35`), which doesn't match the colon convention
+  used everywhere else in the app ("08:00 WITA", etc.).
+- Fixed 2026-09-28: `ClassHabitsInputView.tsx`'s `selectedDate` was a frozen
+  literal (`'25 September 2026 (Hari Ini)'`) used for the "today" badge on
+  all 5 lockedTab screens (7 KAIH, Presensi, Nilai, Portofolio, Prestasi) —
+  and for real recorded fields (`presensi.date`, `homeHabitsValidatedAt`), so
+  the timestamp saved with a student's record was always that same wrong
+  date. Now initializes from `formatWitaDateTime()` and refreshes every 30s
+  via `useEffect`. Same bug, same fix, in the portfolio/achievement `date`
+  fields in `ClassHabitsInputView.tsx` (`handleSavePortfolio`/`handleSaveAward`)
+  and `TeacherSelfSupervisionView.tsx` (used `new Date().toLocaleDateString`
+  with no time zone, i.e. wrong on any server not already set to WITA).
 
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai

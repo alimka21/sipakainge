@@ -3,6 +3,7 @@ import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRe
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { uploadRPPDocument } from '../lib/supabase';
+import { formatWitaDate } from '../lib/time';
 
 interface TeacherSelfSupervisionViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -205,7 +206,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           description: portfolioDesc.trim(),
           feedback: portfolioFeedback.trim(),
           imageUrl: '',
-          date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+          date: formatWitaDate(),
         };
         return {
           ...m,
@@ -241,7 +242,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           title: achievementTitle.trim(),
           category: achievementCategory, // e.g. Kota, Provinsi, Nasional, Sekolah, Kelas
           description: achievementDesc.trim(),
-          date: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+          date: formatWitaDate(),
         };
         return {
           ...m,

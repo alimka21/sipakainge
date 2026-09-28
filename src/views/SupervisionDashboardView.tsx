@@ -5,7 +5,6 @@ import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
 interface SupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
   onSelectTeacherForObservation: (teacherId: string) => void;
-  searchQuery: string;
   sessionStates?: Record<string, any>;
   onUpdateSessionStates?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   teacherList?: TeacherRecord[];
@@ -15,7 +14,6 @@ interface SupervisionDashboardViewProps {
 export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> = ({
   onNavigate,
   onSelectTeacherForObservation,
-  searchQuery,
   sessionStates,
   onUpdateSessionStates,
   teacherList = INITIAL_TEACHERS,
@@ -33,7 +31,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  const effectiveSearch = (searchQuery || localSearch).toLowerCase();
+  const effectiveSearch = localSearch.toLowerCase();
 
   // Dynamic Session status calculations
   const getDynamicCounts = () => {
