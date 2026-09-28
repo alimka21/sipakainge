@@ -187,16 +187,59 @@ whenever you learn something new or change a pattern described here.
   nilai_akademik, portofolio, prestasi, supervision_sessions (unique
   teacher_id+semester). Views: v_rekap_nilai_akademik, v_rekap_presensi,
   v_laporan_supervisi (security_invoker). Storage bucket rpp_bucket.
-- Columns are snake_case; TS types are camelCase. Nothing maps between them
-  yet — `getTeachersData`/`getMuridData` cast `select('*')` straight to the TS
-  types, which would be wrong. Needs a mapper when the app is wired to the DB.
-- **The app does not read/write these tables yet.** Only `testSupabaseConnection`
-  (reads `teachers.id`) and `uploadRPPDocument` (storage) are called.
-  `recordDailyHabit`, `getTeachersData`, `getMuridData` exist but have no
-  callers. All screens still run on mock data from `mockData.ts`/`App.tsx`.
+- Columns are snake_case; TS types are camelCase. `src/lib/supabase.ts` has the
+  mappers (`teacherRowToRecord`/`teacherRecordToRow`, same for murid/rombel) —
+  never `data as TeacherRecord[]` a raw `select('*')` result again.
 - RLS policy `sipakainge_dev_akses_penuh` gives anon full read/write on every
   table because the app has no Supabase Auth. Development only — murid holds
   children's NISN, birth date, address, parent phone.
+
+## Supabase read/write wiring (since 2026-09-28)
+- **Teachers, murid, and rombel are now synced to Supabase when configured.**
+  `App.tsx` hydrates `teachersList`/`muridList`/`rombelList` from
+  `getTeachersData`/`getMuridData`/`getRombelData` in a mount-only `useEffect`
+  — if Supabase is configured, whatever's in the DB overwrites the local
+  `INITIAL_*` defaults, i.e. **the DB is the source of truth once connected**.
+  If not configured, those three getters just return `INITIAL_*` unchanged
+  (same as before), so the app still works standalone.
+- Every CRUD path in `UserManagementView.tsx` (add/edit/delete teacher,
+  add/edit/delete murid, CSV import for both, toggle-observer) and
+  `ClassManagementView.tsx` (add/edit/delete rombel) updates local state
+  first (optimistic, so the UI never blocks on the network) and then awaits
+  the matching `upsert*`/`delete*Remote` call from `src/lib/supabase.ts`,
+  surfacing success/failure via a `notifySync(subject, action, remote)`
+  helper (duplicated in both files — small enough not to share yet). All the
+  `upsert*`/`delete*Remote` functions are safe no-ops (`{success: true}`)
+  when Supabase isn't configured, so the exact same handler code path works
+  with or without a database.
+- **Principal photo is synced too** (`getPrincipalPhoto`/`updatePrincipalPhoto`
+  in `src/lib/supabase.ts`, `school_settings.principal_photo_url`, single row
+  `id = 1`). Hydrated in the same mount `useEffect` as teachers/murid/rombel —
+  only overwrites `principalPhoto` state if a non-null value comes back, so a
+  fresh/never-set DB keeps `APP_ASSETS.principalPhoto` as the default. Saved
+  from `UserManagementView.tsx`'s `handleSavePhoto` via the same
+  `notifySync` pattern as everything else. The photo is stored as the raw
+  base64 data URL from `FileReader` — no Supabase Storage bucket for it (unlike
+  RPP documents, which use `rpp_bucket`) — simplest path given `TEXT` has no
+  practical size limit here, but means the row grows with every re-upload;
+  revisit with a storage bucket if photo size/row bloat ever becomes a
+  problem.
+- Renaming a class only calls `upsertRombel` with the new `name` on the same
+  `id` — an UPSERT-as-UPDATE, not delete+insert — so `murid.rombel`'s
+  `ON UPDATE CASCADE` FK does the renaming of every student's class server-side
+  automatically. The local `onUpdateMuridList` rewrite in
+  `ClassManagementView.tsx` is only there to keep the in-memory React copy in
+  sync; it is not what moves the students in the database.
+- **Known gap, not yet handled:** deleting a teacher sets
+  `rombel.wali_kelas_id` to NULL server-side (`ON DELETE SET NULL`), but the
+  local `rombelList` React state is not refreshed to match — it'll drift
+  until the next full reload/hydration. Also still local-state-only, not
+  synced anywhere: `daily_habits`, `presensi`, `nilai_akademik`, `portofolio`,
+  `prestasi`, `supervision_sessions` — everything entered through
+  `ClassHabitsInputView.tsx` (7 KAIH, Presensi, Nilai, Portofolio, Prestasi)
+  and `ObservationFormView.tsx`/`TeacherSelfSupervisionView.tsx` (supervision
+  sessions) is still browser-session-only. Same pattern (mapper + upsert +
+  wire into the handler) applies whenever that gets picked up.
 
 ## No sample people (since 2026-09-28)
 - `INITIAL_TEACHERS` and `INITIAL_MURID` are empty; `INITIAL_ROMBEL` keeps the

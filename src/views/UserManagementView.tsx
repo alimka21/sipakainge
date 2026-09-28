@@ -7,6 +7,13 @@ import {
   clearSupabaseConfig,
   testSupabaseConnection,
   isSupabaseConfigured,
+  upsertTeacher,
+  upsertTeachers,
+  deleteTeacherRemote,
+  upsertMurid,
+  upsertMuridList,
+  deleteMuridRemote,
+  updatePrincipalPhoto,
 } from '../lib/supabase';
 import supabaseSchemaSql from '../../supabase-schema.sql?raw';
 import {
@@ -20,6 +27,7 @@ import {
   validateMuridRows,
   type ImportError,
 } from '../lib/csvImport';
+import { formatWitaDate } from '../lib/time';
 
 interface UserManagementViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -59,7 +67,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleSavePhoto = () => {
+  const handleSavePhoto = async () => {
     if (!photoPreview) {
       showToast('Pilih foto terlebih dahulu!');
       return;
@@ -67,7 +75,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     if (onUpdatePrincipalPhoto) {
       onUpdatePrincipalPhoto(photoPreview);
     }
-    showToast('✓ Foto profil Kepala Sekolah berhasil diperbarui!');
+    const remote = await updatePrincipalPhoto(photoPreview);
+    notifySync('Foto profil Kepala Sekolah', 'diperbarui', remote);
   };
 
   // CSV Import States
@@ -142,7 +151,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   );
   const muridCheck = validateMuridRows(parsedMurid, new Set(muridList.map((m) => m.nisn)), rombelList);
 
-  const handleImportGuru = () => {
+  const handleImportGuru = async () => {
     const stamp = Date.now();
     const newTeachers: TeacherRecord[] = guruCheck.valid.map((g, index) => ({
       id: `t-import-${stamp}-${index}`,
@@ -173,10 +182,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setTeachersList((prev) => [...prev, ...newTeachers]);
     setParsedGuru([]);
     setIsImportGuruOpen(false);
-    showToast(`✓ ${newTeachers.length} data guru berhasil diimpor.`);
+    const remote = await upsertTeachers(newTeachers);
+    notifySync(`${newTeachers.length} data guru`, 'diimpor', remote);
   };
 
-  const handleImportMurid = () => {
+  const handleImportMurid = async () => {
     const stamp = Date.now();
     const newStudents: MuridRecord[] = muridCheck.valid.map((m, index) => ({
       id: `m-import-${stamp}-${index}`,
@@ -207,7 +217,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setMuridList((prev: MuridRecord[]) => [...prev, ...newStudents]);
     setParsedMurid([]);
     setIsImportMuridOpen(false);
-    showToast(`✓ ${newStudents.length} data murid berhasil diimpor.`);
+    const remote = await upsertMuridList(newStudents);
+    notifySync(`${newStudents.length} data murid`, 'diimpor', remote);
   };
 
   // Modals state
@@ -249,31 +260,41 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // TEACHER CRUD HANDLERS
-  const handleToggleObserver = (id: string) => {
-    setTeachersList((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextState = !t.isObserver;
-          showToast(
-            `${t.name} ${
-              nextState
-                ? 'berhasil ditetapkan sebagai GURU OBSERVER oleh Super Admin (Kepala Sekolah)!'
-                : 'telah dicabut dari peran Observer dan kembali menjadi Guru Reguler.'
-            }`
-          );
-          return {
-            ...t,
-            isObserver: nextState,
-            assignedAt: nextState ? '26 September 2026' : undefined,
-          };
-        }
-        return t;
-      })
+  /** Tampilkan hasil sinkronisasi ke Supabase setelah state lokal sudah diubah. */
+  const notifySync = (subject: string, action: string, remote: { success: boolean; message?: string }) => {
+    if (!isSupabaseConfigured()) {
+      showToast(`✓ ${subject} berhasil ${action} (belum tersambung Supabase — hanya tersimpan di sesi ini).`);
+      return;
+    }
+    showToast(
+      remote.success
+        ? `✓ ${subject} berhasil ${action} & disimpan ke Supabase.`
+        : `${subject} ${action} secara lokal, tapi GAGAL disimpan ke Supabase: ${remote.message}`
     );
   };
 
-  const handleSaveTeacher = (e: React.FormEvent) => {
+  // TEACHER CRUD HANDLERS
+  const handleToggleObserver = async (id: string) => {
+    const target = teachersList.find((t) => t.id === id);
+    if (!target) return;
+    const nextState = !target.isObserver;
+    const updated: TeacherRecord = {
+      ...target,
+      isObserver: nextState,
+      assignedAt: nextState ? formatWitaDate() : undefined,
+    };
+    setTeachersList((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    showToast(
+      `${updated.name} ${
+        nextState
+          ? 'berhasil ditetapkan sebagai GURU OBSERVER oleh Super Admin (Kepala Sekolah)!'
+          : 'telah dicabut dari peran Observer dan kembali menjadi Guru Reguler.'
+      }`
+    );
+    await upsertTeacher(updated);
+  };
+
+  const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacherForm.name.trim() || !teacherForm.nip.trim()) {
       showToast('Harap isi Nama dan NIP Guru!');
@@ -281,27 +302,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     }
 
     const savedSubject = teacherForm.teacherType === 'Guru Kelas' ? 'Guru Kelas' : teacherForm.subject;
+    let savedTeacher: TeacherRecord;
 
     if (editingTeacher) {
-      setTeachersList((prev) =>
-        prev.map((t) =>
-          t.id === editingTeacher.id
-            ? {
-                ...t,
-                name: teacherForm.name,
-                nip: teacherForm.nip,
-                rombel: teacherForm.rombel,
-                fase: teacherForm.fase,
-                subject: savedSubject,
-                isObserver: teacherForm.isObserver,
-              }
-            : t
-        )
-      );
-      showToast(`Data guru ${teacherForm.name} berhasil diperbarui!`);
+      savedTeacher = {
+        ...editingTeacher,
+        name: teacherForm.name,
+        nip: teacherForm.nip,
+        rombel: teacherForm.rombel,
+        fase: teacherForm.fase,
+        subject: savedSubject,
+        isObserver: teacherForm.isObserver,
+      };
+      setTeachersList((prev) => prev.map((t) => (t.id === editingTeacher.id ? savedTeacher : t)));
       setEditingTeacher(null);
     } else {
-      const newTeacher: TeacherRecord = {
+      savedTeacher = {
         id: `t-${Date.now()}`,
         name: teacherForm.name,
         nip: teacherForm.nip,
@@ -331,10 +347,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         stageBadgeType: 'tertiary',
         isObserver: teacherForm.isObserver,
         assignedObserverName: 'Fahmawati, S.Pd. (Kepala Sekolah)',
-        assignedAt: teacherForm.isObserver ? '26 September 2026' : undefined,
+        assignedAt: teacherForm.isObserver ? formatWitaDate() : undefined,
       };
-      setTeachersList((prev) => [...prev, newTeacher]);
-      showToast(`Guru baru ${teacherForm.name} berhasil ditambahkan!`);
+      setTeachersList((prev) => [...prev, savedTeacher]);
     }
 
     setIsAddTeacherOpen(false);
@@ -347,47 +362,47 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       isObserver: false,
       teacherType: 'Guru Kelas',
     });
+
+    const remote = await upsertTeacher(savedTeacher);
+    notifySync(`Data guru ${savedTeacher.name}`, editingTeacher ? 'diperbarui' : 'ditambahkan', remote);
   };
 
-  const handleDeleteTeacher = (id: string, name: string) => {
+  const handleDeleteTeacher = async (id: string, name: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus data guru ${name}?`)) {
       setTeachersList((prev) => prev.filter((t) => t.id !== id));
-      showToast(`Data guru ${name} berhasil dihapus.`);
+      const remote = await deleteTeacherRemote(id);
+      notifySync(`Data guru ${name}`, 'dihapus', remote);
     }
   };
 
   // MURID CRUD HANDLERS
-  const handleSaveMurid = (e: React.FormEvent) => {
+  const handleSaveMurid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!muridForm.name.trim() || !muridForm.nisn.trim()) {
       showToast('Harap isi Nama Murid dan NISN!');
       return;
     }
 
+    let savedMurid: MuridRecord;
+
     if (editingMurid) {
-      setMuridList((prev: MuridRecord[]) =>
-        prev.map((m: MuridRecord) =>
-          m.id === editingMurid.id
-            ? {
-                ...m,
-                name: muridForm.name,
-                nisn: muridForm.nisn,
-                nis: muridForm.nis || m.nis,
-                gender: muridForm.gender,
-                rombel: muridForm.rombel,
-                fase: muridForm.fase,
-                parentName: muridForm.parentName || m.parentName,
-                parentPhone: muridForm.parentPhone || m.parentPhone,
-                tanggalLahir: muridForm.tanggalLahir || m.tanggalLahir,
-                alamat: muridForm.alamat || m.alamat,
-              }
-            : m
-        )
-      );
-      showToast(`Data murid ${muridForm.name} berhasil diperbarui!`);
+      savedMurid = {
+        ...editingMurid,
+        name: muridForm.name,
+        nisn: muridForm.nisn,
+        nis: muridForm.nis || editingMurid.nis,
+        gender: muridForm.gender,
+        rombel: muridForm.rombel,
+        fase: muridForm.fase,
+        parentName: muridForm.parentName || editingMurid.parentName,
+        parentPhone: muridForm.parentPhone || editingMurid.parentPhone,
+        tanggalLahir: muridForm.tanggalLahir || editingMurid.tanggalLahir,
+        alamat: muridForm.alamat || editingMurid.alamat,
+      };
+      setMuridList((prev: MuridRecord[]) => prev.map((m) => (m.id === editingMurid.id ? savedMurid : m)));
       setEditingMurid(null);
     } else {
-      const newMurid: MuridRecord = {
+      savedMurid = {
         id: `m-${Date.now()}`,
         name: muridForm.name,
         nisn: muridForm.nisn,
@@ -414,8 +429,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         },
         notes: 'Murid baru terdaftar dalam sistem pemantauan 7 KAIH.',
       };
-      setMuridList((prev: MuridRecord[]) => [...prev, newMurid]);
-      showToast(`Murid baru ${muridForm.name} berhasil ditambahkan ke ${muridForm.rombel}!`);
+      setMuridList((prev: MuridRecord[]) => [...prev, savedMurid]);
     }
 
     setIsAddMuridOpen(false);
@@ -431,12 +445,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       tanggalLahir: '',
       alamat: '',
     });
+
+    const remote = await upsertMurid(savedMurid);
+    notifySync(`Data murid ${savedMurid.name}`, editingMurid ? 'diperbarui' : 'ditambahkan', remote);
   };
 
-  const handleDeleteMurid = (id: string, name: string) => {
+  const handleDeleteMurid = async (id: string, name: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus data murid ${name}?`)) {
       setMuridList((prev: MuridRecord[]) => prev.filter((m: MuridRecord) => m.id !== id));
-      showToast(`Data murid ${name} berhasil dihapus.`);
+      const remote = await deleteMuridRemote(id);
+      notifySync(`Data murid ${name}`, 'dihapus', remote);
     }
   };
 

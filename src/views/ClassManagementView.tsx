@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId, RombelRecord, TeacherRecord, MuridRecord } from '../types';
 import { INITIAL_ROMBEL, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
+import { upsertRombel, deleteRombelRemote, isSupabaseConfigured } from '../lib/supabase';
 
 interface ClassManagementViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -67,7 +68,19 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
     setFormWaliKelasId(rombel.waliKelasId || '');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const notifySync = (subject: string, action: string, remote: { success: boolean; message?: string }) => {
+    if (!isSupabaseConfigured()) {
+      showToast(`✓ ${subject} berhasil ${action} (belum tersambung Supabase — hanya tersimpan di sesi ini).`);
+      return;
+    }
+    showToast(
+      remote.success
+        ? `✓ ${subject} berhasil ${action} & disimpan ke Supabase.`
+        : `${subject} ${action} secara lokal, tapi GAGAL disimpan ke Supabase: ${remote.message}`
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = formName.trim();
     if (!name) {
@@ -79,42 +92,41 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
       return;
     }
 
+    let savedRombel: RombelRecord;
+    const isEditing = !!editingId;
+
     if (editingId) {
       const oldName = rombelData.find((r) => r.id === editingId)?.name;
-      updateRombel((prev) =>
-        prev.map((r) =>
-          r.id === editingId ? { ...r, name, fase: formFase, waliKelasId: formWaliKelasId || null } : r
-        )
-      );
+      savedRombel = { id: editingId, name, fase: formFase, waliKelasId: formWaliKelasId || null };
+      updateRombel((prev) => prev.map((r) => (r.id === editingId ? savedRombel : r)));
       // Students reference their class by name, so a rename must move them too.
+      // The DB does this automatically (murid.rombel -> rombel.name is ON UPDATE
+      // CASCADE), so only the local React copy needs updating by hand here.
       if (oldName && oldName !== name && onUpdateMuridList) {
         onUpdateMuridList((prev) =>
           prev.map((m) => (m.rombel === oldName ? { ...m, rombel: name, fase: formFase } : m))
         );
       }
-      showToast(`✓ Kelas ${name} berhasil diperbarui!`);
     } else {
-      const newRombel: RombelRecord = {
-        id: `r-${Date.now()}`,
-        name,
-        fase: formFase,
-        waliKelasId: formWaliKelasId || null,
-      };
-      updateRombel((prev) => [...prev, newRombel]);
-      showToast(`✓ Kelas ${name} berhasil ditambahkan!`);
+      savedRombel = { id: `r-${Date.now()}`, name, fase: formFase, waliKelasId: formWaliKelasId || null };
+      updateRombel((prev) => [...prev, savedRombel]);
     }
     resetForm();
+
+    const remote = await upsertRombel(savedRombel);
+    notifySync(`Kelas ${name}`, isEditing ? 'diperbarui' : 'ditambahkan', remote);
   };
 
-  const handleDelete = (rombel: RombelRecord) => {
+  const handleDelete = async (rombel: RombelRecord) => {
     const jumlahMurid = countMuridByRombel(rombel.name);
     if (jumlahMurid > 0) {
       showToast(`Kelas ${rombel.name} masih memiliki ${jumlahMurid} murid. Pindahkan murid terlebih dahulu.`);
       return;
     }
     updateRombel((prev) => prev.filter((r) => r.id !== rombel.id));
-    showToast(`Kelas ${rombel.name} telah dihapus.`);
     if (editingId === rombel.id) resetForm();
+    const remote = await deleteRombelRemote(rombel.id);
+    notifySync(`Kelas ${rombel.name}`, 'dihapus', remote);
   };
 
   const countMuridByRombel = (rombelName: string) => muridList.filter((m) => m.rombel === rombelName).length;

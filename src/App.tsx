@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, UserRole, SupervisionSession, SupervisionStatus } from './types';
 import { AppHeader } from './components/AppHeader';
 import { AppSidebar } from './components/AppSidebar';
@@ -11,6 +11,7 @@ import { BeritaAcaraModal, QuickRecordModal } from './components/Modals';
 import { EmptyDataNotice } from './components/EmptyDataNotice';
 import { getGuruClass, getVisibleMurid } from './lib/access';
 import { normalizeNip } from './lib/csvImport';
+import { getTeachersData, getMuridData, getRombelData, getPrincipalPhoto, isSupabaseConfigured } from './lib/supabase';
 import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS } from './data/mockData';
 
 // Views
@@ -55,6 +56,25 @@ export default function App() {
       setToastMessage(null);
     }, 3500);
   };
+
+  // Muat data guru, murid, dan kelas dari Supabase saat aplikasi dibuka —
+  // tanpa ini, layar selalu mulai kosong (state React tidak persisten across
+  // reload) walaupun datanya sudah tersimpan di database.
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    (async () => {
+      const [remoteRombel, remoteTeachers, remoteMurid, remotePrincipalPhoto] = await Promise.all([
+        getRombelData(),
+        getTeachersData(),
+        getMuridData(),
+        getPrincipalPhoto(),
+      ]);
+      setRombelList(remoteRombel);
+      setTeachersList(remoteTeachers);
+      setMuridList(remoteMurid);
+      if (remotePrincipalPhoto) setPrincipalPhoto(remotePrincipalPhoto);
+    })();
+  }, []);
 
   const handleNavigate = (screen: ScreenId) => {
     setCurrentScreen(screen);
