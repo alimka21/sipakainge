@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
+import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
 
 interface ObservationFormViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -138,6 +139,10 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
 
   // Helper function to update current session state fields
   const updateSession = (fields: Partial<any>) => {
+    if (fields.status && !canTransition(activeSession.status, fields.status)) {
+      triggerToast(describeBlockedTransition(activeSession.status, fields.status));
+      return;
+    }
     onUpdateSessionStates((prev) => ({
       ...prev,
       [selectedTeacherId]: {

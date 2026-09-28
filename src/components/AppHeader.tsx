@@ -12,6 +12,7 @@ interface AppHeaderProps {
   guruName?: string;
   childName?: string;
   childClass?: string;
+  onLogout?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -24,6 +25,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   guruName = 'Guru',
   childName = 'Orang Tua Murid',
   childClass,
+  onLogout,
 }) => {
   const guruInitials = guruName
     .replace(/^(Ibu|Bpk\.?|Bapak|Drs\.?|Dr\.?)\s+/i, '')
@@ -170,7 +172,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 type="button"
                 onClick={() => {
                   setIsLogoutModalOpen(false);
-                  onNavigate('landing');
+                  if (onLogout) onLogout();
+                  else onNavigate('landing');
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm"
               >

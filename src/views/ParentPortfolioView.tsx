@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
+import { formatWitaDateTime } from '../lib/time';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -191,10 +192,10 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800">
+    <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800 print:bg-white print:pb-0">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-medium text-white shadow-2xl shadow-slate-900/30 ring-1 ring-white/10">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-medium text-white shadow-2xl shadow-slate-900/30 ring-1 ring-white/10 print:hidden">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-500/20 text-teal-300">
             <span className="material-symbols-outlined text-base">check_circle</span>
           </div>
@@ -203,7 +204,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       )}
 
       {/* Top Breadcrumb Context */}
-      <div className="border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md sm:px-8">
+      <div className="border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md sm:px-8 print:hidden">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 sm:text-sm">
             <button
@@ -230,7 +231,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
             </button>
             <button
               onClick={onDownloadReport}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-800"
+              disabled={!activeMurid}
+              title={!activeMurid ? 'Pilih siswa terlebih dahulu' : 'Unduh seluruh portofolio sebagai PDF'}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
               Unduh Portofolio PDF
@@ -239,10 +242,21 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-8 print:max-w-none print:px-0 print:pt-0">
+        {/* Print-only letterhead */}
+        {activeMurid && (
+          <div className="hidden print:flex items-center justify-between border-b-2 border-slate-800 pb-3 mb-4">
+            <div>
+              <p className="text-sm font-extrabold">UPT SPF SDN Percontohan PAM Makassar</p>
+              <p className="text-xs">Laporan Portofolio & Profil Holistik Murid</p>
+            </div>
+            <p className="text-[10px] text-slate-500">Dicetak: {formatWitaDateTime()}</p>
+          </div>
+        )}
+
         {/* SELECTOR FOR TEACHERS AND PRINCIPALS */}
         {(userRole === 'kepala_sekolah' || userRole === 'guru') && (
-          <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
+          <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4 print:hidden">
             <h2 className="text-sm font-bold text-slate-950 flex items-center gap-2">
               <span className="material-symbols-outlined text-teal-800 text-lg">person_search</span>
               <span>Pilih Kelas & Siswa untuk Menampilkan Profil / Portofolio</span>
@@ -291,7 +305,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
         {activeMurid ? (
           <>
             {/* Child Profile Bento Card */}
-            <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-sm ring-1 ring-slate-200/70">
+            <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-sm ring-1 ring-slate-200/70 print:border print:rounded-xl print:break-inside-avoid">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
                   <div className="relative">
@@ -403,8 +417,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
 
-        {/* Tab Navigation */}
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+        {/* Tab Navigation — screen only; the printed PDF includes every section below regardless of active tab */}
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 print:hidden">
           {[
             { id: 'radar', label: 'Ringkasan & Radar Karakter', icon: 'radar' },
             { id: 'habits', label: '7 Kebiasaan Anak Hebat (7 KAIH)', icon: 'verified' },
@@ -428,8 +442,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
         </div>
 
         {/* Tab 1: Radar Karakter & Ringkasan Holistik */}
-        {activeTab === 'radar' && (
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className={`mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12 print:block print:space-y-4 print:break-inside-avoid ${activeTab === 'radar' ? '' : 'hidden print:grid'}`}>
             {/* Left: SVG Radar Heptagon (7 Sisi) */}
             <div className="lg:col-span-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -572,11 +585,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
           </div>
-        )}
 
         {/* Tab 2: Detail 7 Kebiasaan */}
-        {activeTab === 'habits' && (
-          <div className="mt-6 space-y-4">
+        <div className={`mt-6 space-y-4 print:break-inside-avoid ${activeTab === 'habits' ? '' : 'hidden print:block'}`}>
             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
@@ -639,11 +650,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
           </div>
-        )}
 
         {/* Tab 3: Capaian Akademik & TP */}
-        {activeTab === 'academic' && (
-          <div className="mt-6 space-y-6">
+        <div className={`mt-6 space-y-6 print:break-inside-avoid ${activeTab === 'academic' ? '' : 'hidden print:block'}`}>
             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
@@ -695,11 +704,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
           </div>
-        )}
 
         {/* Tab 4: Karya & Portofolio Murid */}
-        {activeTab === 'artifacts' && (
-          <div className="mt-6 space-y-6">
+        <div className={`mt-6 space-y-6 print:break-inside-avoid ${activeTab === 'artifacts' ? '' : 'hidden print:block'}`}>
             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
@@ -761,11 +768,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
           </div>
-        )}
 
         {/* Tab 5: Prestasi & Apresiasi */}
-        {activeTab === 'awards' && (
-          <div className="mt-6 space-y-6">
+        <div className={`mt-6 space-y-6 print:break-inside-avoid ${activeTab === 'awards' ? '' : 'hidden print:block'}`}>
             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
@@ -806,7 +811,6 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
             </div>
           </div>
-        )}
           </>
         ) : (
           <div className="text-center p-12 border border-dashed border-slate-200 bg-white rounded-3xl space-y-3">

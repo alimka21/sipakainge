@@ -4,6 +4,7 @@ import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { uploadRPPDocument } from '../lib/supabase';
 import { formatWitaDate } from '../lib/time';
+import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
 
 interface TeacherSelfSupervisionViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -264,6 +265,10 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   };
 
   const updateSession = (fields: Partial<SupervisionSession>) => {
+    if (fields.status && !canTransition(activeSession.status, fields.status)) {
+      showToast(describeBlockedTransition(activeSession.status, fields.status));
+      return;
+    }
     onUpdateSessionStates((prev) => ({
       ...prev,
       [selectedTeacherId]: {

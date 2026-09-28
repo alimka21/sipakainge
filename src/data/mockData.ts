@@ -7,6 +7,12 @@ export const APP_ASSETS = {
   principalPhoto: 'https://lh3.googleusercontent.com/aida/AEtjO1UklTfGWNtEP7y35w9SEC_qhPmM2GY6gi2KtZIVmMfgt3R0mDdRTuX3UF3NObWCnUOXAhdfhOTeOHa2RByRewhyy6x32XI5_ywK86fmCh-aSvfPYnqQpgc-Rb6NBZqm-5xP4WU4wp5hghAEEyFtNVemogihS69vXboewTsf4zKpCrjlGUPeC29RQCVdl4ysa0_CYeOb5LGzjZRMtFoL-Coc7IKM85Fuwuc-xTKyh4reYNrD4ApB9NtLt6A',
 };
 
+// Kepala Sekolah is a singleton, not a row in INITIAL_TEACHERS — this is her
+// login identity. Password-equals-NIP login (see LoginPortalView.tsx /
+// App.tsx onLogin) checks against this constant.
+export const PRINCIPAL_NAME = 'Fahmawati, S.Pd.';
+export const PRINCIPAL_NIP = '197305111995012002';
+
 export const INITIAL_TEACHERS: TeacherRecord[] = [];
 
 export const INITIAL_ROMBEL: RombelRecord[] = [

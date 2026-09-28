@@ -24,6 +24,120 @@ whenever you learn something new or change a pattern described here.
   accept these as **optional** props and fall back to local state/mock data
   if not provided (see `UserManagementView.tsx` pattern:
   `const muridList = initialMuridProp || localMuridList;`).
+- **`App.tsx`'s `handleNavigate` is a guarded router, not a bare setter** —
+  see "Route guards & permission architecture" below. Never bypass it with a
+  raw `setCurrentScreen(x)` for a navigation a user triggers; the guard is
+  the only thing enforcing that a screen belongs to the active role.
+
+## Route guards & permission architecture (since 2026-09-28) — `src/lib/routes.ts`
+Before this existed, access control was **100% implicit**: `AppSidebar.tsx`
+simply didn't render a button for a role that shouldn't see a screen, but
+nothing on the screen side ever checked — any `onNavigate('user_management')`
+call from anywhere, by any role, would render it. `src/lib/routes.ts` is now
+the single source of truth for "who can be on which screen":
+- `ROUTES: Record<ScreenId, RouteDef>` — each screen declares `allowedRoles`
+  (`'any'` for public/pre-login screens, or a list of `UserRole`s) and an
+  optional `guard(ctx) => boolean` for a condition beyond role (e.g. a guru
+  must have a class assigned — `hasGuruClass` — before entering
+  `class_habits_input`/`academic_input`/`portfolio_input`/`award_input`/
+  `attendance_input`; an orang_tua must have a resolvable `parentMuridId`
+  before entering `parent_dashboard`/`parent_calendar`/`parent_portfolio`).
+- `resolveNavigation(target, ctx)` — the enforcement point. Denied roles or
+  failed guards redirect to `ROLE_HOME[ctx.userRole]` (or `PUBLIC_HOME` =
+  `'landing'` if not logged in) with a `blockedMessage` for a toast, instead
+  of rendering the screen.
+- `NavContext` = `{ isLoggedIn, userRole, hasGuruClass, hasParentChild }`,
+  rebuilt every render in `App.tsx` from live state
+  (`getGuruClass(rombelList, guruId)`, `muridList.some(...)`).
+- `App.tsx`'s `handleNavigate` is the ONLY function that should change
+  `currentScreen` in response to a user action — it runs every target through
+  `resolveNavigation` first. The three exceptions, which set `currentScreen`
+  directly instead of through `handleNavigate`, are `onLogin` (successful
+  login jumps straight to `ROLE_HOME[role]` — see below for why),
+  `handleRoleChange` (the dev/demo role switcher), and `handleLogout`.
+- **Why `onLogin` bypasses `handleNavigate`**: `setUserRole`/`setGuruId`/
+  `setParentMuridId` are React state setters that haven't committed by the
+  time the very next line runs. If the post-login jump went through
+  `handleNavigate`/`resolveNavigation`, it would evaluate against the
+  *previous* (pre-login) `navContext` and could wrongly reject the first
+  navigation of the session. Login already validated the identity itself
+  (NIP/NISN match), so re-validating through the guard is redundant anyway —
+  it goes straight to `ROLE_HOME[role]`.
+- **The role switcher (`handleRoleChange`, header dropdown) is treated as
+  "become logged in as this role."** This app has no real multi-account
+  auth — switching role via the header IS how every role's private workspace
+  gets previewed — so it sets `isLoggedIn = true` too. It asks
+  `resolveNavigation` whether the *current* screen is still valid for the
+  *new* role (using an inline context override, not stale `navContext`); if
+  yes it stays put, otherwise it goes to `ROLE_HOME[role]`. This replaced a
+  hand-rolled per-role whitelist that had a real bug: switching to `guru` or
+  `orang_tua` while already on a valid private screen (e.g. `class_habits_input`,
+  `teacher_my_supervision`) used to incorrectly bounce to the *public
+  marketing* screens (`teacher_dashboard`/`student_dashboard`) instead of
+  that role's actual workspace, because the whitelist was incomplete and its
+  fallback targets were wrong.
+- **Logout is now a real thing.** Before, the header's "Ya, Keluar Akun"
+  button just called `onNavigate('landing')` — `userRole`/`guruId`/
+  `parentMuridId` state was never cleared, so "logging out" didn't actually
+  end the session. `App.tsx`'s `handleLogout` clears `isLoggedIn`, `guruId`,
+  `parentMuridId`, and navigates to `PUBLIC_HOME`; `AppHeader.tsx` takes an
+  `onLogout?` prop and calls it instead of raw `onNavigate('landing')`
+  (falls back to the old behavior if not provided).
+- **Known edge case, not a bug**: `resolveNavigation`'s fallback is always
+  `ROLE_HOME[role]`, which itself can fail its own guard (e.g. a guru with no
+  class navigating anywhere blocked falls back to `class_habits_input`, which
+  they're *also* not fully cleared for). This still "works" because
+  `ClassHabitsInputView.tsx` already renders its own graceful in-page "belum
+  ditugaskan" message for that case (pre-existing, not part of this change) —
+  the guard's toast and the view's in-page message end up saying something
+  similar. Not worth a guard-of-guard fallback chain for this one case.
+- **Not covered by this pass** (deliberately, per explicit scope agreement):
+  extracting business logic (CRUD/validation) out of `UserManagementView.tsx`/
+  `ClassManagementView.tsx`/`ClassHabitsInputView.tsx` into a service layer.
+  The route guard only decides *whether a screen renders*, not what happens
+  inside it.
+
+## Supervision status state machine (since 2026-09-28) — `src/lib/supervisionStateMachine.ts`
+`SupervisionSession.status` (12-value `SupervisionStatus` enum) previously had
+**zero transition validation** — any of ~11 call sites across
+`ObservationFormView.tsx` (the KS-run "official" flow) and
+`TeacherSelfSupervisionView.tsx` (a parallel guru-facing/simulator flow that
+models the same enum slightly differently — it uses `DISETUJUI` where the
+official flow uses `TERJADWAL` for "schedule approved") could set `.status`
+to anything. A full audit of every writer and every reader (see git history
+of this file / the session that added this) found:
+- `SUPERVISION_TRANSITIONS: Record<SupervisionStatus, SupervisionStatus[]>` —
+  built as a **codification of every transition the app already performs**,
+  not a redesign; verified to allow all 12 real writer transitions (including
+  same-status re-saves, e.g. re-uploading a corrected RPP) before being wired
+  in, specifically so wiring it in changes zero existing behavior.
+- `canTransition(from, to)` treats `from === to` as always valid (re-saving
+  fields without progressing the stage isn't "a transition"), otherwise
+  checks the table.
+- Wired into the single `updateSession(fields)` helper each of the two view
+  files already had as their one choke point for writing session state — NOT
+  into all 11 call sites individually. If `fields.status` fails
+  `canTransition`, the update is dropped and `describeBlockedTransition`'s
+  message is shown as a toast instead of silently applying it.
+- Three enum values are **dead code** — declared in the type, checked in
+  read-side guard lists, but never written by anything:
+  `HASIL_SUPERVISI_TERSEDIA`, `PENGUATAN_KEPALA_SEKOLAH`, `TINDAK_LANJUT`.
+  Kept in the transition table (not deleted) so a future feature can start
+  writing them without touching this file.
+- `STATUS_STAGE` — a single canonical status→stage-bucket lookup, provided as
+  the thing new code should read from. **Not yet migrated**:
+  `SupervisionDashboardView.tsx` currently hand-rolls this same bucketing
+  ~12 separate times, with real drift between copies — some comparisons are
+  against string literals (`'PERLU_PENYESUAIAN'`, `'DITOLAK'`, space-vs-
+  underscore variants like `'OBSERVASI TERJADWAL'` / `'OBSERVASI_TERJADWAL'`)
+  that were never in the `SupervisionStatus` type to begin with, evidence the
+  type was pared down at some point without updating every consumer.
+  Migrating those ~12 call sites to `STATUS_STAGE` is a good next step but is
+  business-logic-layer work, out of scope for this pass (see above).
+- `rppStatus` (`'BELUM_DIPERIKSA' | 'DIPERIKSA' | 'PERLU_PERBAIKAN'`) is a
+  *separate* field on `SupervisionSession`, not covered by this state
+  machine — it doesn't have the same multi-writer inconsistency problem, so
+  it wasn't in scope for this audit.
 
 ## Sidebar (`src/components/AppSidebar.tsx`)
 - Single file, no config/data file — plain JSX per role, gated by
@@ -318,6 +432,93 @@ whenever you learn something new or change a pattern described here.
   fields in `ClassHabitsInputView.tsx` (`handleSavePortfolio`/`handleSaveAward`)
   and `TeacherSelfSupervisionView.tsx` (used `new Date().toLocaleDateString`
   with no time zone, i.e. wrong on any server not already set to WITA).
+
+## Login: identifier + password (since 2026-09-28) — `LoginPortalView.tsx` / `App.tsx`
+**The password field used to be pure decoration.** `LoginPortalView.tsx`'s
+`handleSubmit` called `onLogin(selectedRole, identifier)` — the `password`
+state existed and rendered a real `<input type="password">`, but was never
+read anywhere. Worse, the `kepala_sekolah` branch of `App.tsx`'s `onLogin`
+didn't check `identifier` either — any input (or none) logged in as Kepala
+Sekolah unconditionally. Only `guru` (NIP → `teachersList`) and `orang_tua`
+(NISN → `muridList`) validated *anything*, and neither checked a password.
+- **New login scheme**: password must equal the same ID number as the
+  identifier — NIP for `kepala_sekolah`/`guru`, NISN for `orang_tua`. Not real
+  security (there's still no backend auth, just client-side string
+  comparison), but a wrong/blank password is now rejected instead of
+  silently accepted.
+- `onLogin` signature is now `(role, identifier, password) => void`.
+  Validation lives entirely in `App.tsx` (single source of truth, not
+  duplicated into `LoginPortalView.tsx`): extract the ID from `identifier`
+  the same way as before (`normalizeNip(identifier.replace(/\(.*\)/, ''))`
+  for NIP, `identifier.match(/\d+/)` for NISN), then compare the
+  identically-parsed `password` against it. **`password` needs the same
+  `.replace(/\(.*\)/, '')` strip before `normalizeNip`** — the "Akun
+  Belajar.id"/"Google SSO" shortcut buttons pass `identifier` as `password`
+  too (simulating a successful SSO handoff, so no manual password needed for
+  that path), and `identifier`'s default value for kepala_sekolah includes
+  `(Fahmawati, S.Pd.)` — without the strip on `password` too, both SSO
+  buttons would fail to log in the principal. (Caught by simulating all
+  three roles × valid/invalid password before calling this done — see this
+  session's transcript, not committed as a test file.)
+- **`PRINCIPAL_NIP`/`PRINCIPAL_NAME`** (`mockData.ts`) are new — Kepala
+  Sekolah is a singleton, not a row in `INITIAL_TEACHERS`/Supabase `teachers`,
+  so she has no list to look her NIP up against; these constants are it. The
+  literal `'197305111995012002'` is still duplicated as display-only text in
+  `Modals.tsx`, `TeacherSupervisionDashboardView.tsx`, `ParentDashboardView.tsx`,
+  `UserManagementView.tsx` — not migrated to the constant (out of scope for
+  this fix, those are cosmetic, not auth-checked).
+
+## PDF export — `window.print()` + Tailwind `print:` variants (since 2026-09-28)
+No PDF library was added (stack constraint). Both PDF-download features reuse
+the browser's native print pipeline: a button calls `window.print()`, and the
+page's own CSS (Tailwind's `print:` media-variant classes) hides screen-only
+chrome and reveals print-only content, so the browser's print dialog ("Save
+as PDF") produces the report.
+- **`TeacherSupervisionReportView.tsx`** — "Unduh PDF" button. Gated by
+  `isFinished = session?.status === 'SELESAI'`: `disabled={!session ||
+  !isFinished}`, with a `title` tooltip explaining why when disabled ("Laporan
+  bisa diunduh setelah siklus supervisi berstatus Selesai"). Verified via SSR
+  (`renderToString`): a `DRAFT` session renders the literal `disabled=""`
+  attribute; a `SELESAI` session renders no `disabled` attribute at all. (A
+  naive substring check like `html.includes('disabled')` is NOT a valid test
+  here — the button's own className contains the Tailwind classes
+  `disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed`,
+  so that substring is always present regardless of the real attribute; check
+  for the literal `disabled=""` token instead.)
+  - Report content added: `QualCard` (reusable qualitative-note card,
+    `print:break-inside-avoid`, icon hidden on print) for "Telaah Perangkat
+    Ajar" (kelebihan15/kekurangan16/rekomendasi17) and "Penguatan &
+    Rekomendasi Kepala Sekolah" (penguatanKS/catatanKhususKS/rekomendasiKS);
+    `REFLECTION_QUESTIONS` (6 fixed question labels, copied verbatim from
+    `ObservationFormView.tsx` step 7) render "Refleksi Diri Guru". Each
+    section is gated by a `hasX` boolean so it only renders if that session
+    actually has data.
+  - Print-only letterhead (`hidden print:flex`) at the top and a two-column
+    signature block ("Guru yang Disupervisi" / "Kepala Sekolah / Supervisor",
+    `hidden print:grid`) at the bottom exist only in the printed output.
+    Screen-only chrome (breadcrumb, banner, guru-picker, buttons) is
+    `print:hidden`.
+- **`ParentPortfolioView.tsx`** — "Unduh Laporan" button now calls
+  `window.print()` (previously a fake toast-only handler), `disabled={!activeMurid}`.
+  - The view is normally a 5-tab single-page-at-a-time UI (`radar`/`habits`/
+    `academic`/`artifacts`/`awards`). **Printing needs all 5 sections at
+    once**, so each tab's content block was converted from conditional
+    mounting (`{activeTab === 'x' && (<div>...)}`) to always-mounted with a
+    visibility toggle: `className={... ${activeTab === 'x' ? '' : 'hidden
+    print:grid'}}` (or `print:block`). This means all 5 sections' data is
+    always in the DOM; only the screen-time visibility is tab-gated, print
+    always shows everything. If you add a 6th tab, follow this same pattern,
+    not the old conditional-mount one.
+  - Print-only letterhead (`hidden print:flex`, school name +
+    `formatWitaDateTime()`) shown only when `activeMurid` is set. Screen-only
+    chrome (toasts, breadcrumb, class/student picker, tab nav bar) is
+    `print:hidden`.
+- **Not verified**: actual print layout (margins, page breaks, font scaling)
+  in a real browser print-preview — this environment has no browser access.
+  Verification here was limited to `tsc --noEmit`, `npm run build`, and SSR
+  smoke tests (`renderToString`) confirming the right DOM/attributes are
+  produced; visually confirm in-browser before relying on this for a real
+  printed report.
 
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai

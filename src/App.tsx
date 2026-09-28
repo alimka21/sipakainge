@@ -11,8 +11,9 @@ import { BeritaAcaraModal, QuickRecordModal } from './components/Modals';
 import { EmptyDataNotice } from './components/EmptyDataNotice';
 import { getGuruClass, getVisibleMurid } from './lib/access';
 import { normalizeNip } from './lib/csvImport';
+import { resolveNavigation, ROLE_HOME, PUBLIC_HOME, NavContext } from './lib/routes';
 import { getTeachersData, getMuridData, getRombelData, getPrincipalPhoto, isSupabaseConfigured } from './lib/supabase';
-import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS } from './data/mockData';
+import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS, PRINCIPAL_NIP } from './data/mockData';
 
 // Views
 import { LandingPageView } from './views/LandingPageView';
@@ -44,8 +45,17 @@ export default function App() {
   const [principalPhoto, setPrincipalPhoto] = useState<string>(APP_ASSETS.principalPhoto);
   const [parentMuridId, setParentMuridId] = useState<string>('');
   const [guruId, setGuruId] = useState<string>('');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const loggedInGuru = teachersList.find((t) => t.id === guruId);
   const parentChild = muridList.find((m) => m.id === parentMuridId);
+
+  // Single source of truth for "who can be on which screen" — see src/lib/routes.ts.
+  const navContext: NavContext = {
+    isLoggedIn,
+    userRole,
+    hasGuruClass: !!getGuruClass(rombelList, guruId),
+    hasParentChild: muridList.some((m) => m.id === parentMuridId),
+  };
 
   // Lifted global supervision workflow states mapped to Teacher IDs
   const [sessionStates, setSessionStates] = useState<Record<string, SupervisionSession>>({});
@@ -76,39 +86,34 @@ export default function App() {
     })();
   }, []);
 
+  /**
+   * The only place `currentScreen` should be set from outside this function
+   * (aside from login/logout/role-switch, which have their own well-defined
+   * destinations below). Runs every navigation attempt through the central
+   * route table so a screen can never be reached by a role it doesn't belong
+   * to, no matter which button or callback tried to get there.
+   */
   const handleNavigate = (screen: ScreenId) => {
-    setCurrentScreen(screen);
+    const result = resolveNavigation(screen, navContext);
+    if (result.blockedMessage) showToast(result.blockedMessage);
+    setCurrentScreen(result.screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /**
+   * Dev/demo role switcher (header dropdown) — this app has no real
+   * multi-account auth, so "switching role" is how every role's private
+   * workspace gets previewed. It's treated as equivalent to being logged in
+   * as that role: if the screen you're currently on is still valid for the
+   * new role (per the same route table `handleNavigate` uses), stay there;
+   * otherwise land on that role's home screen.
+   */
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
-    if (role === 'orang_tua') {
-      if (
-        currentScreen !== 'student_dashboard' &&
-        currentScreen !== 'parent_dashboard' &&
-        currentScreen !== 'parent_calendar' &&
-        currentScreen !== 'parent_portfolio'
-      ) {
-        setCurrentScreen('student_dashboard');
-      }
-    } else if (role === 'guru') {
-      if (
-        currentScreen !== 'teacher_dashboard' &&
-        currentScreen !== 'observation_form' &&
-        currentScreen !== 'teacher_report'
-      ) {
-        setCurrentScreen('teacher_dashboard');
-      }
-    } else {
-      if (
-        currentScreen === 'parent_dashboard' ||
-        currentScreen === 'parent_calendar' ||
-        currentScreen === 'parent_portfolio' ||
-        currentScreen === 'student_dashboard'
-      ) {
-        setCurrentScreen('supervision_dashboard');
-      }
+    setIsLoggedIn(true);
+    const stillValid = resolveNavigation(currentScreen, { ...navContext, userRole: role, isLoggedIn: true }).screen === currentScreen;
+    if (!stillValid) {
+      setCurrentScreen(ROLE_HOME[role]);
     }
     showToast(
       `Beralih peran ke: ${
@@ -119,6 +124,15 @@ export default function App() {
           : 'Orang Tua / Murid'
       }`
     );
+  };
+
+  /** Clears the active session and returns to the public landing page. */
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setGuruId('');
+    setParentMuridId('');
+    setCurrentScreen(PUBLIC_HOME);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const isPublicStandaloneView =
@@ -179,7 +193,19 @@ export default function App() {
           )}
           {currentScreen === 'login' && (
             <LoginPortalView
-              onLogin={(role, identifier) => {
+              onLogin={(role, identifier, password) => {
+                // Sets isLoggedIn + jumps straight to the role's home screen
+                // rather than going through the guarded handleNavigate — the
+                // role/identity state (setUserRole/setGuruId/setParentMuridId)
+                // hasn't committed yet in this same synchronous call, so
+                // resolveNavigation would still see the *previous* session
+                // and could reject a perfectly valid first navigation.
+                //
+                // Login scheme: password = the same ID number as the
+                // identifier (NIP for kepala_sekolah/guru, NISN for orang
+                // tua). Not real security (there's no backend auth), but it
+                // means a blank/wrong password is rejected instead of
+                // silently accepted like before.
                 if (role === 'orang_tua') {
                   const nisnMatch = identifier.match(/\d+/);
                   const foundMurid = nisnMatch
@@ -189,9 +215,16 @@ export default function App() {
                     showToast('NISN tidak terdaftar. Hubungi wali kelas atau admin sekolah.');
                     return;
                   }
+                  const passwordNisn = password.match(/\d+/)?.[0];
+                  if (passwordNisn !== foundMurid.nisn) {
+                    showToast('Kata sandi salah. Kata sandi orang tua adalah NISN Ananda.');
+                    return;
+                  }
                   setUserRole(role);
                   setParentMuridId(foundMurid.id);
-                  handleNavigate('parent_dashboard');
+                  setIsLoggedIn(true);
+                  setCurrentScreen(ROLE_HOME.orang_tua);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                   return;
                 }
                 if (role === 'guru') {
@@ -201,13 +234,32 @@ export default function App() {
                     showToast('NIP tidak terdaftar. Hubungi Kepala Sekolah untuk didaftarkan.');
                     return;
                   }
+                  if (normalizeNip(password.replace(/\(.*\)/, '')) !== normalizeNip(foundGuru.nip)) {
+                    showToast('Kata sandi salah. Kata sandi guru adalah NIP Anda sendiri.');
+                    return;
+                  }
                   setUserRole(role);
                   setGuruId(foundGuru.id);
-                  handleNavigate('class_habits_input');
+                  setIsLoggedIn(true);
+                  setCurrentScreen(ROLE_HOME.guru);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  return;
+                }
+                // Kepala Sekolah — singleton account, checked against PRINCIPAL_NIP
+                // rather than a list (she isn't a row in teachersList).
+                const ksNip = normalizeNip(identifier.replace(/\(.*\)/, ''));
+                if (ksNip !== PRINCIPAL_NIP) {
+                  showToast('NIP Kepala Sekolah tidak dikenali.');
+                  return;
+                }
+                if (normalizeNip(password.replace(/\(.*\)/, '')) !== PRINCIPAL_NIP) {
+                  showToast('Kata sandi salah. Kata sandi Kepala Sekolah adalah NIP Anda sendiri.');
                   return;
                 }
                 setUserRole(role);
-                handleNavigate('supervision_dashboard');
+                setIsLoggedIn(true);
+                setCurrentScreen(ROLE_HOME.kepala_sekolah);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onNavigate={handleNavigate}
             />
@@ -215,36 +267,41 @@ export default function App() {
         </div>
       ) : (
         // Private Data Management Layout with Collapsible Sidebar & Header
-        <div className="flex min-h-screen pt-16">
-          {/* Collapsible Sidebar */}
-          <AppSidebar
-            currentScreen={currentScreen}
-            onNavigate={handleNavigate}
-            userRole={userRole}
-            onSwitchRole={handleRoleChange}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            guruClass={getGuruClass(rombelList, guruId)}
-          />
+        <div className="flex min-h-screen pt-16 print:pt-0">
+          {/* Collapsible Sidebar — hidden entirely when printing a report */}
+          <div className="print:hidden">
+            <AppSidebar
+              currentScreen={currentScreen}
+              onNavigate={handleNavigate}
+              userRole={userRole}
+              onSwitchRole={handleRoleChange}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              guruClass={getGuruClass(rombelList, guruId)}
+            />
+          </div>
 
           {/* Main Content Area */}
           <div
-            className={`flex-1 transition-all duration-300 ${
+            className={`flex-1 transition-all duration-300 print:pl-0 ${
               isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
             }`}
           >
-            {/* Top Navigation Header with Toggle */}
-            <AppHeader
-              userRole={userRole}
-              onSwitchRole={handleRoleChange}
-              onNavigate={handleNavigate}
-              isSidebarCollapsed={isSidebarCollapsed}
-              onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              principalPhotoUrl={principalPhoto}
-              guruName={loggedInGuru?.name}
-              childName={parentChild?.name}
-              childClass={parentChild?.rombel}
-            />
+            {/* Top Navigation Header with Toggle — hidden when printing */}
+            <div className="print:hidden">
+              <AppHeader
+                userRole={userRole}
+                onSwitchRole={handleRoleChange}
+                onNavigate={handleNavigate}
+                isSidebarCollapsed={isSidebarCollapsed}
+                onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                principalPhotoUrl={principalPhoto}
+                guruName={loggedInGuru?.name}
+                childName={parentChild?.name}
+                childClass={parentChild?.rombel}
+                onLogout={handleLogout}
+              />
+            </div>
 
             {/* Screen Router for Private Workspaces */}
             <main className="min-h-[calc(100vh-4rem)]">
@@ -446,9 +503,7 @@ export default function App() {
               {currentScreen === 'parent_portfolio' && (
                 <ParentPortfolioView
                   onNavigate={handleNavigate}
-                  onDownloadReport={() => {
-                    showToast('Menyiapkan dan mengunduh Dokumen Portofolio Holistik...');
-                  }}
+                  onDownloadReport={() => window.print()}
                   userRole={userRole}
                   muridList={muridList}
                   parentMuridId={parentMuridId}

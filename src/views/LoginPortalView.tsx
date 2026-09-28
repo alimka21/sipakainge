@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
 import { ScreenId, UserRole } from '../types';
-import { APP_ASSETS } from '../data/mockData';
+import { APP_ASSETS, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { SchoolLogo } from '../components/SchoolLogo';
 
 interface LoginPortalViewProps {
-  onLogin: (role: UserRole, identifier: string) => void;
+  onLogin: (role: UserRole, identifier: string, password: string) => void;
   onNavigate: (screen: ScreenId) => void;
 }
 
 export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNavigate }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('kepala_sekolah');
-  const [identifier, setIdentifier] = useState('197305111995012002 (Fahmawati, S.Pd.)');
-  const [password, setPassword] = useState('••••••••••••');
+  const [identifier, setIdentifier] = useState(`${PRINCIPAL_NIP} (${PRINCIPAL_NAME})`);
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
+    setPassword('');
     if (role === 'kepala_sekolah') {
-      setIdentifier('197305111995012002 (Fahmawati, S.Pd.)');
-    } else if (role === 'guru') {
-      setIdentifier('');
+      setIdentifier(`${PRINCIPAL_NIP} (${PRINCIPAL_NAME})`);
     } else {
       setIdentifier('');
     }
@@ -28,7 +27,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(selectedRole, identifier);
+    onLogin(selectedRole, identifier, password);
   };
 
   return (
@@ -217,6 +216,13 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder={
+                      selectedRole === 'orang_tua'
+                        ? 'Kata sandi = NISN Ananda'
+                        : selectedRole === 'guru'
+                        ? 'Kata sandi = NIP Anda'
+                        : 'Kata sandi = NIP Kepala Sekolah'
+                    }
                     className="w-full bg-[#eff4ff]/70 border border-slate-200 pl-10 pr-10 py-2.5 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#00685f] focus:bg-white transition-all"
                   />
                   <button
@@ -229,6 +235,11 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     </span>
                   </button>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {selectedRole === 'orang_tua'
+                    ? 'Kata sandi default adalah NISN Ananda (sama seperti di atas).'
+                    : 'Kata sandi default adalah NIP Anda (sama seperti di atas).'}
+                </p>
               </div>
 
               <div className="flex items-center justify-between text-xs">
@@ -261,7 +272,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => onLogin(selectedRole, identifier)}
+                  onClick={() => onLogin(selectedRole, identifier, identifier)}
                   className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-xs font-semibold text-slate-700 transition-colors"
                 >
                   <span className="material-symbols-outlined text-base text-[#00685f]">school</span>
@@ -269,7 +280,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                 </button>
                 <button
                   type="button"
-                  onClick={() => onLogin(selectedRole, identifier)}
+                  onClick={() => onLogin(selectedRole, identifier, identifier)}
                   className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-xs font-semibold text-slate-700 transition-colors"
                 >
                   <span className="font-bold text-red-500">G</span>
