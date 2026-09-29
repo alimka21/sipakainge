@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenId, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
+import { formatWitaDate } from '../lib/time';
 
 interface TeacherSupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -19,6 +20,12 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   teacherList = INITIAL_TEACHERS,
 }) => {
   const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2026/2027');
+  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
+    return () => clearInterval(interval);
+  }, []);
   const [faseFilter, setFaseFilter] = useState<'all' | 'fase-a' | 'fase-b' | 'fase-c' | 'mapel'>('all');
   const [observerFilter, setObserverFilter] = useState<'all' | 'observer_only' | 'regular_only'>('all');
   const [selectedTeacherModal, setSelectedTeacherModal] = useState<TeacherRecord | null>(null);
@@ -605,7 +612,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                   Siklus Semester Aktif
                 </span>
                 <span>•</span>
-                <span>Terakhir diperbarui: 26 September 2026</span>
+                <span>Terakhir diperbarui: {todayLabel}</span>
               </div>
             </div>
           </div>

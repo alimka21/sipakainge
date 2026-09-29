@@ -577,6 +577,38 @@ nothing about completeness).
   renders inside the `activeMurid &&` branch, but kept for type-safety
   symmetry with the rest of the file).
 
+## More hardcoded "today" dates fixed (2026-09-29)
+User reported the app showing "Kamis, 20 Maret 2026" instead of the real
+date — same class of bug as the `ClassHabitsInputView.tsx` fix documented
+above in "Time", just in different components that were missed then. Found
+via `grep` for literal Indonesian month-name date strings, fixed 3 more
+"today"/"last updated" badges:
+- `SupervisionDashboardView.tsx` — header calendar badge ("Kamis, 20 Maret
+  2026" → live `formatWitaDate()` in `todayLabel` state, refreshed every 30s
+  via `useEffect`, same pattern as `ClassHabitsInputView.tsx`'s `selectedDate`).
+- `TeacherSupervisionDashboardView.tsx` — footer "Terakhir diperbarui: 26
+  September 2026" → same `todayLabel` pattern.
+- `ParentDashboardView.tsx` — welcome header "• Minggu, 27 September 2026" →
+  same `todayLabel` pattern.
+- `Modals.tsx`'s `BeritaAcaraModal` — "Waktu Pelaksanaan: Jumat, 20 Maret 2026
+  • 08.00 - 09.15 WITA" was a fully fake fixed value; changed to read the
+  real `session?.tanggal`/`session?.jam` fields (the modal already receives
+  `session` as a prop) instead of a live "today" formatter, since this field
+  represents the *session's scheduled* date/time, not the current date.
+- **Left as-is** (deliberately, not the same bug class): `ParentPortfolioView.tsx`'s
+  sample portfolio/academic entry dates (`'18 September 2025'` etc.),
+  `StudentProgressDashboardView.tsx`'s month-picker options/labels
+  (`'September 2025'`, `'Agustus 2025'`), `ParentCalendarView.tsx`'s calendar
+  grid month header, and `ClassHabitsInputView.tsx`'s `aw.date || 'September
+  2026'` award-date fallback — these are illustrative sample content or
+  literal fallback placeholders for a per-record field, not "what is today"
+  displays, so they don't have the same live-clock bug (same reasoning as the
+  "illustrative framework copy" carve-out in the "Class list" section above).
+- Grep recipe for finding more of these if reported again: search for
+  Indonesian month names (`Januari|Februari|...|Desember`) followed by a
+  4-digit year as a literal string in `src/`, excluding `src/lib/time.ts`
+  itself (which legitimately contains the format examples in comments).
+
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai
   Akademik, Karya & Portofolio, Prestasi) reusing `ClassHabitsInputView`

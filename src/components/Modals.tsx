@@ -66,7 +66,9 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="font-semibold text-slate-500">Waktu Pelaksanaan:</span>
-              <span className="font-bold text-slate-900">Jumat, 20 Maret 2026 • 08.00 - 09.15 WITA</span>
+              <span className="font-bold text-slate-900">
+                {session?.tanggal || '-'}{session?.jam ? ` • ${session.jam}` : ''}
+              </span>
             </div>
           </div>
 

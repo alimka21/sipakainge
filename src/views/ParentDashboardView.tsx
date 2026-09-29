@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
+import { formatWitaDate } from '../lib/time';
 
 interface ParentDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -30,6 +31,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const isKS = userRole === 'kepala_sekolah';
   const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
+  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const activeMurid = isOrangTua
     ? visibleMurid[0]
@@ -147,7 +154,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] text-[#89f5e7] uppercase font-bold tracking-wider">
                       {isKS ? "Pemantauan Mutu Karakter" : "Kemitraan Rumah & Sekolah"}
                     </span>
-                    <span className="text-xs text-white/80">• Minggu, 27 September 2026</span>
+                    <span className="text-xs text-white/80">• {todayLabel}</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                     {isKS 

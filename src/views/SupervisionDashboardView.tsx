@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenId, TeacherRecord, MuridRecord } from '../types';
 import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
+import { formatWitaDate } from '../lib/time';
 
 interface SupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -24,6 +25,12 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
   const [localSearch, setLocalSearch] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -437,7 +444,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
         <div className="flex items-center flex-wrap gap-2.5">
           <div className="inline-flex items-center bg-white px-3.5 py-2 rounded-xl shadow-sm gap-2 text-slate-600 border border-slate-200/80">
             <span className="material-symbols-outlined text-base text-[#00685f]">calendar_today</span>
-            <span className="text-xs font-semibold text-slate-800">Kamis, 20 Maret 2026</span>
+            <span className="text-xs font-semibold text-slate-800">{todayLabel}</span>
           </div>
         </div>
       </div>
