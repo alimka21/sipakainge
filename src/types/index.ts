@@ -18,7 +18,8 @@ export type ScreenId =
   | 'portfolio_input'
   | 'award_input'
   | 'attendance_input'
-  | 'class_management';
+  | 'class_management'
+  | 'account_settings';
 
 export interface PrayerTimesChecklist {
   subuh: boolean;
@@ -41,6 +42,8 @@ export interface MuridRecord {
   fase: 'fase-a' | 'fase-b' | 'fase-c';
   parentName: string;
   parentPhone: string;
+  /** Hashed custom password for the parent account; absent = default (NISN). */
+  parentPasswordHash?: string;
   tanggalLahir?: string;
   alamat?: string;
   avatar?: string;
@@ -61,7 +64,11 @@ export interface RombelRecord {
 export interface TeacherRecord {
   id: string;
   name: string;
-  nip: string;
+  nip: string; // '' when the guru has no NIP — they log in with `username` instead
+  /** Login name for a guru without NIP (first name, e.g. "ratna"); stable once assigned. */
+  username?: string;
+  /** Hashed custom password; absent = default (NIP, or "123456" without NIP). */
+  passwordHash?: string;
   avatar: string;
   initials: string;
   rombel: string;

@@ -4,13 +4,15 @@ import { APP_ASSETS, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { SchoolLogo } from '../components/SchoolLogo';
 
 interface LoginPortalViewProps {
-  onLogin: (role: UserRole, identifier: string, password: string) => void;
+  onLogin: (role: UserRole, identifier: string, password: string) => void | Promise<void>;
   onNavigate: (screen: ScreenId) => void;
+  principalName?: string;
 }
 
-export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNavigate }) => {
+export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNavigate, principalName = PRINCIPAL_NAME }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('kepala_sekolah');
-  const [identifier, setIdentifier] = useState(`${PRINCIPAL_NIP} (${PRINCIPAL_NAME})`);
+  const [identifier, setIdentifier] = useState(`${PRINCIPAL_NIP} (${principalName})`);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -19,7 +21,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
     setSelectedRole(role);
     setPassword('');
     if (role === 'kepala_sekolah') {
-      setIdentifier(`${PRINCIPAL_NIP} (${PRINCIPAL_NAME})`);
+      setIdentifier(`${PRINCIPAL_NIP} (${principalName})`);
     } else {
       setIdentifier('');
     }
@@ -181,7 +183,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  {selectedRole === 'orang_tua' ? 'NISN Ananda' : selectedRole === 'guru' ? 'NIP Guru' : 'NIP / Email / Nama Pengguna'}
+                  {selectedRole === 'orang_tua' ? 'NISN Ananda' : selectedRole === 'guru' ? 'NIP / Username Guru' : 'NIP Kepala Sekolah'}
                 </label>
                 <div className="relative flex items-center">
                   <span className="material-symbols-outlined absolute left-3 text-slate-400 text-lg">badge</span>
@@ -190,7 +192,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder={selectedRole === 'orang_tua' ? 'Contoh: 0148928371' : selectedRole === 'guru' ? 'NIP guru, contoh: 198705232010012015' : undefined}
+                    placeholder={selectedRole === 'orang_tua' ? 'Contoh: 0148928371' : selectedRole === 'guru' ? 'NIP, atau nama depan bila tanpa NIP (mis. ratna)' : undefined}
                     inputMode={selectedRole === 'orang_tua' ? 'numeric' : undefined}
                     className="w-full bg-[#eff4ff]/70 border border-slate-200 pl-10 pr-3 py-2.5 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#00685f] focus:bg-white transition-all"
                   />
@@ -200,14 +202,23 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     Masukkan NISN putra/putri Anda. Satu akun orang tua hanya terhubung ke satu siswa.
                   </p>
                 )}
+                {selectedRole === 'guru' && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Guru yang belum punya NIP masuk dengan nama depan (huruf kecil), mis. Ratna Sari Dewi → <strong>ratna</strong>.
+                  </p>
+                )}
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-700">Kata Sandi</label>
-                  <a href="#" className="text-xs text-[#00685f] font-semibold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen((v) => !v)}
+                    className="text-xs text-[#00685f] font-semibold hover:underline"
+                  >
                     Lupa kata sandi?
-                  </a>
+                  </button>
                 </div>
                 <div className="relative flex items-center">
                   <span className="material-symbols-outlined absolute left-3 text-slate-400 text-lg">lock</span>
@@ -218,10 +229,10 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={
                       selectedRole === 'orang_tua'
-                        ? 'Kata sandi = NISN Ananda'
+                        ? 'Bawaan: NISN Ananda'
                         : selectedRole === 'guru'
-                        ? 'Kata sandi = NIP Anda'
-                        : 'Kata sandi = NIP Kepala Sekolah'
+                        ? 'Bawaan: NIP Anda, atau 123456 bila tanpa NIP'
+                        : 'Bawaan: NIP Kepala Sekolah'
                     }
                     className="w-full bg-[#eff4ff]/70 border border-slate-200 pl-10 pr-10 py-2.5 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#00685f] focus:bg-white transition-all"
                   />
@@ -237,9 +248,18 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   {selectedRole === 'orang_tua'
-                    ? 'Kata sandi default adalah NISN Ananda (sama seperti di atas).'
-                    : 'Kata sandi default adalah NIP Anda (sama seperti di atas).'}
+                    ? 'Kata sandi bawaan adalah NISN Ananda. Bisa diganti di menu Pengaturan Akun.'
+                    : selectedRole === 'guru'
+                    ? 'Kata sandi bawaan: NIP Anda, atau 123456 untuk guru tanpa NIP. Bisa diganti di menu Pengaturan Akun.'
+                    : 'Kata sandi bawaan adalah NIP Anda. Bisa diganti di menu Pengaturan Akun.'}
                 </p>
+                {forgotOpen && (
+                  <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900">
+                    {selectedRole === 'kepala_sekolah'
+                      ? 'Kata sandi Kepala Sekolah dapat dikembalikan ke bawaan (NIP) oleh pengelola database Supabase.'
+                      : 'Hubungi Kepala Sekolah untuk mengembalikan kata sandi Anda ke bawaan melalui menu Manajemen Pengguna.'}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-xs">

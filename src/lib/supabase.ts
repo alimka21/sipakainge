@@ -114,7 +114,9 @@ function teacherRowToRecord(row: any): TeacherRecord {
   return {
     id: row.id,
     name: row.name,
-    nip: row.nip,
+    nip: row.nip || '',
+    username: row.username ?? undefined,
+    passwordHash: row.password_hash ?? undefined,
     avatar: row.avatar || '',
     initials: row.initials || '',
     rombel: row.rombel || '',
@@ -162,6 +164,8 @@ function teacherRecordToRow(t: TeacherRecord) {
     notes: t.notes ?? null,
     assigned_observer_name: t.assignedObserverName ?? null,
     assigned_at: t.assignedAt ?? null,
+    username: t.username ?? null,
+    password_hash: t.passwordHash ?? null,
   };
 }
 
@@ -176,6 +180,7 @@ function muridRowToRecord(row: any): MuridRecord {
     fase: row.fase || 'fase-a',
     parentName: row.parent_name || '',
     parentPhone: row.parent_phone || '',
+    parentPasswordHash: row.parent_password_hash ?? undefined,
     tanggalLahir: row.tanggal_lahir ?? undefined,
     alamat: row.alamat ?? undefined,
     avatar: row.avatar || undefined,
@@ -206,6 +211,7 @@ function muridRecordToRow(m: MuridRecord) {
     habits: m.habits || {},
     prayers: m.prayers || DEFAULT_PRAYERS,
     notes: m.notes || null,
+    parent_password_hash: m.parentPasswordHash ?? null,
   };
 }
 
@@ -227,7 +233,34 @@ function rombelRecordToRow(r: RombelRecord) {
   };
 }
 
-export type SupabaseWriteResult = { success: boolean; message?: string };
+export type SupabaseWriteResult = {
+  success: boolean;
+  message?: string;
+  /** Saved, but without username/password columns — the DB hasn't run the latest supabase-schema.sql yet. */
+  accountColumnsMissing?: boolean;
+};
+
+// Account columns added 2026-10-01. Until the school re-runs supabase-schema.sql,
+// PostgREST rejects any write that mentions them ("Could not find the
+// 'password_hash' column ... in the schema cache"); retrying without them
+// keeps ordinary guru/murid saves working in the meantime.
+const ACCOUNT_COLUMNS = ['username', 'password_hash', 'parent_password_hash'];
+const isMissingAccountColumn = (message: string) =>
+  /schema cache|column/i.test(message) && ACCOUNT_COLUMNS.some((c) => message.includes(c));
+const stripAccountColumns = (row: Record<string, unknown>) => {
+  const copy = { ...row };
+  ACCOUNT_COLUMNS.forEach((c) => delete copy[c]);
+  return copy;
+};
+
+async function upsertWithAccountFallback(table: string, rows: Record<string, unknown>[]): Promise<SupabaseWriteResult> {
+  if (!supabase) return { success: true };
+  const { error } = await supabase.from(table).upsert(rows, { onConflict: 'id' });
+  if (!error) return { success: true };
+  if (!isMissingAccountColumn(error.message)) return { success: false, message: error.message };
+  const retry = await supabase.from(table).upsert(rows.map(stripAccountColumns), { onConflict: 'id' });
+  return retry.error ? { success: false, message: retry.error.message } : { success: true, accountColumnsMissing: true };
+}
 
 /**
  * Data Access Layer (DAL) untuk Teachers
@@ -288,8 +321,7 @@ export async function getRombelData(): Promise<RombelRecord[]> {
 export async function upsertTeachers(teachers: TeacherRecord[]): Promise<SupabaseWriteResult> {
   if (!isSupabaseConfigured() || !supabase) return { success: true };
   try {
-    const { error } = await supabase.from('teachers').upsert(teachers.map(teacherRecordToRow), { onConflict: 'id' });
-    return error ? { success: false, message: error.message } : { success: true };
+    return await upsertWithAccountFallback('teachers', teachers.map(teacherRecordToRow));
   } catch (err) {
     return { success: false, message: err instanceof Error ? err.message : String(err) };
   }
@@ -316,8 +348,7 @@ export async function deleteTeacherRemote(id: string): Promise<SupabaseWriteResu
 export async function upsertMuridList(murid: MuridRecord[]): Promise<SupabaseWriteResult> {
   if (!isSupabaseConfigured() || !supabase) return { success: true };
   try {
-    const { error } = await supabase.from('murid').upsert(murid.map(muridRecordToRow), { onConflict: 'id' });
-    return error ? { success: false, message: error.message } : { success: true };
+    return await upsertWithAccountFallback('murid', murid.map(muridRecordToRow));
   } catch (err) {
     return { success: false, message: err instanceof Error ? err.message : String(err) };
   }
@@ -361,23 +392,48 @@ export async function deleteRombelRemote(id: string): Promise<SupabaseWriteResul
 }
 
 /**
- * Ambil foto profil Kepala Sekolah yang tersimpan (kolom
- * `school_settings.principal_photo_url`, satu-satunya baris, id = 1).
- * Mengembalikan null jika belum ada / belum dikonfigurasi, supaya pemanggil
- * bisa jatuh kembali ke foto bawaan (APP_ASSETS.principalPhoto).
+ * Pengaturan akun Kepala Sekolah dari `school_settings` (satu-satunya baris,
+ * id = 1): foto, nama, dan hash kata sandi. `select('*')` supaya tetap jalan
+ * di DB yang belum punya kolom `principal_password_hash`. Null = belum ada /
+ * belum dikonfigurasi, pemanggil memakai nilai bawaan.
  */
-export async function getPrincipalPhoto(): Promise<string | null> {
+export async function getSchoolSettings(): Promise<{
+  photoUrl: string | null;
+  principalName: string | null;
+  principalPasswordHash: string | null;
+} | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
   try {
-    const { data, error } = await supabase
-      .from('school_settings')
-      .select('principal_photo_url')
-      .eq('id', 1)
-      .maybeSingle();
+    const { data, error } = await supabase.from('school_settings').select('*').eq('id', 1).maybeSingle();
     if (error || !data) return null;
-    return data.principal_photo_url || null;
+    return {
+      photoUrl: data.principal_photo_url || null,
+      principalName: data.principal_name || null,
+      principalPasswordHash: data.principal_password_hash || null,
+    };
   } catch {
     return null;
+  }
+}
+
+/** Simpan nama dan/atau hash kata sandi Kepala Sekolah (baris id = 1). */
+export async function updatePrincipalAccount(fields: {
+  principalName?: string;
+  principalPasswordHash?: string | null;
+}): Promise<SupabaseWriteResult> {
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
+  const row: Record<string, unknown> = {};
+  if (fields.principalName !== undefined) row.principal_name = fields.principalName;
+  if (fields.principalPasswordHash !== undefined) row.principal_password_hash = fields.principalPasswordHash;
+  try {
+    const { error } = await supabase.from('school_settings').update(row).eq('id', 1);
+    if (!error) return { success: true };
+    if (/principal_password_hash/.test(error.message)) {
+      return { success: false, accountColumnsMissing: true, message: error.message };
+    }
+    return { success: false, message: error.message };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
   }
 }
 

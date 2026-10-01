@@ -60,6 +60,9 @@ export const ROUTES: Record<ScreenId, RouteDef> = {
   user_management: { allowedRoles: ['kepala_sekolah'] },
   class_management: { allowedRoles: ['kepala_sekolah'] },
 
+  // Every logged-in role — each account edits only its own name/password
+  account_settings: { allowedRoles: ['kepala_sekolah', 'guru', 'orang_tua'] },
+
   // Kepala Sekolah + Guru (shared supervision workflow)
   observation_form: { allowedRoles: ['kepala_sekolah', 'guru'] },
   teacher_report: { allowedRoles: ['kepala_sekolah', 'guru'] },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MuridRecord, SupervisionSession, TeacherRecord } from '../types';
-import { HABIT_LIST } from '../data/mockData';
+import { HABIT_LIST, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { getAcademicPeriod } from '../lib/time';
 
 interface BeritaAcaraModalProps {
@@ -9,6 +9,7 @@ interface BeritaAcaraModalProps {
   onConfirm: () => void;
   teacher?: TeacherRecord;
   session?: SupervisionSession;
+  principalName?: string;
 }
 
 export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
@@ -17,6 +18,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
   onConfirm,
   teacher,
   session,
+  principalName = PRINCIPAL_NAME,
 }) => {
   if (!isOpen) return null;
 
@@ -63,7 +65,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Pengamat / Supervisor:</span>
-              <span className="font-bold text-teal-800">Fahmawati, S.Pd. (Kepala Sekolah • NIP. 197305111995012002)</span>
+              <span className="font-bold text-teal-800">{principalName} (Kepala Sekolah • NIP. {PRINCIPAL_NIP})</span>
             </div>
             <div className="flex justify-between">
               <span className="font-semibold text-slate-500">Waktu Pelaksanaan:</span>
@@ -106,7 +108,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
             <div className="text-right">
               <p>Supervisor / Kepala Sekolah</p>
               <div className="h-10 flex items-center justify-end font-serif italic text-teal-900 font-bold">
-                ( Fahmawati, S.Pd. )
+                ( {principalName} )
               </div>
             </div>
           </div>

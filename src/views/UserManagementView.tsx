@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenId, TeacherRecord, MuridRecord, UserRole, RombelRecord } from '../types';
-import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import {
   getCurrentSupabaseConfig,
   saveSupabaseConfig,
@@ -28,6 +28,7 @@ import {
   type ImportError,
 } from '../lib/csvImport';
 import { formatWitaDate } from '../lib/time';
+import { withUsernames, pickUsername, DEFAULT_NO_NIP_PASSWORD } from '../lib/accounts';
 
 interface UserManagementViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -39,6 +40,7 @@ interface UserManagementViewProps {
   principalPhotoUrl?: string;
   onUpdatePrincipalPhoto?: (url: string) => void;
   rombelList?: RombelRecord[];
+  principalName?: string;
 }
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
@@ -51,6 +53,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   principalPhotoUrl,
   onUpdatePrincipalPhoto,
   rombelList = INITIAL_ROMBEL,
+  principalName = PRINCIPAL_NAME,
 }) => {
   const defaultRombel = rombelList[0]?.name ?? '';
   const defaultFase = rombelList[0]?.fase ?? 'fase-a';
@@ -90,6 +93,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     const kelas = rombelList.map((r) => r.name);
     const content = buildCsv(GURU_TEMPLATE_HEADERS, [
       ['Ibu Nurhasanah, S.Pd.', '198705232010012015', kelas[0] ?? '', 'Bahasa Indonesia', 'TIDAK'],
+      ['Ratna Sari Dewi, S.Pd.', '', kelas[1] ?? '', 'Guru Kelas', 'TIDAK'],
       ['Bpk. Syahdan, S.Pd.', '198211052006041009', '', 'PJOK', 'YA'],
     ]);
     downloadCsv('template_import_guru_sipakainge.csv', content);
@@ -179,11 +183,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       stageBadgeType: 'neutral',
       isObserver: g.isObserver,
     }));
-    setTeachersList((prev) => [...prev, ...newTeachers]);
+    // Guru without NIP get a username (first name) so they can log in.
+    const allTeachers = withUsernames([...teachersList, ...newTeachers]);
+    const imported = allTeachers.slice(teachersList.length);
+    setTeachersList(allTeachers);
     setParsedGuru([]);
     setIsImportGuruOpen(false);
-    const remote = await upsertTeachers(newTeachers);
-    notifySync(`${newTeachers.length} data guru`, 'diimpor', remote);
+    const remote = await upsertTeachers(imported);
+    const noNip = imported.filter((t) => !t.nip.trim());
+    notifySync(
+      `${imported.length} data guru`,
+      'diimpor',
+      remote,
+      noNip.length > 0
+        ? `Guru tanpa NIP masuk dengan username: ${noNip.map((t) => t.username).join(', ')} (kata sandi ${DEFAULT_NO_NIP_PASSWORD}).`
+        : undefined
+    );
   };
 
   const handleImportMurid = async () => {
@@ -261,15 +276,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   };
 
   /** Tampilkan hasil sinkronisasi ke Supabase setelah state lokal sudah diubah. */
-  const notifySync = (subject: string, action: string, remote: { success: boolean; message?: string }) => {
+  const notifySync = (
+    subject: string,
+    action: string,
+    remote: { success: boolean; message?: string },
+    extra?: string
+  ) => {
+    const tail = extra ? ` ${extra}` : '';
     if (!isSupabaseConfigured()) {
-      showToast(`✓ ${subject} berhasil ${action} (belum tersambung Supabase — hanya tersimpan di sesi ini).`);
+      showToast(`✓ ${subject} berhasil ${action} (belum tersambung Supabase — hanya tersimpan di sesi ini).${tail}`);
       return;
     }
     showToast(
       remote.success
-        ? `✓ ${subject} berhasil ${action} & disimpan ke Supabase.`
-        : `${subject} ${action} secara lokal, tapi GAGAL disimpan ke Supabase: ${remote.message}`
+        ? `✓ ${subject} berhasil ${action} & disimpan ke Supabase.${tail}`
+        : `${subject} ${action} secara lokal, tapi GAGAL disimpan ke Supabase: ${remote.message}${tail}`
     );
   };
 
@@ -296,8 +317,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teacherForm.name.trim() || !teacherForm.nip.trim()) {
-      showToast('Harap isi Nama dan NIP Guru!');
+    if (!teacherForm.name.trim()) {
+      showToast('Harap isi Nama Guru!');
+      return;
+    }
+    const formNip = normalizeNip(teacherForm.nip);
+    if (formNip && teachersList.some((t) => t.id !== editingTeacher?.id && normalizeNip(t.nip) === formNip)) {
+      showToast(`NIP ${formNip} sudah dipakai guru lain.`);
       return;
     }
 
@@ -308,7 +334,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       savedTeacher = {
         ...editingTeacher,
         name: teacherForm.name,
-        nip: teacherForm.nip,
+        nip: formNip,
         rombel: teacherForm.rombel,
         fase: teacherForm.fase,
         subject: savedSubject,
@@ -320,7 +346,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       savedTeacher = {
         id: `t-${Date.now()}`,
         name: teacherForm.name,
-        nip: teacherForm.nip,
+        nip: formNip,
         avatar: '',
         initials: teacherForm.name
           .split(' ')
@@ -346,10 +372,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         stageBadgeText: 'Observasi Terjadwal',
         stageBadgeType: 'tertiary',
         isObserver: teacherForm.isObserver,
-        assignedObserverName: 'Fahmawati, S.Pd. (Kepala Sekolah)',
+        assignedObserverName: `${principalName} (Kepala Sekolah)`,
         assignedAt: teacherForm.isObserver ? formatWitaDate() : undefined,
       };
       setTeachersList((prev) => [...prev, savedTeacher]);
+    }
+
+    // A guru without NIP logs in with a username; assign one if missing. It
+    // isn't re-derived on later name edits, so the login stays the same.
+    if (!savedTeacher.nip && !savedTeacher.username) {
+      const taken = new Set(
+        teachersList.filter((t) => t.id !== savedTeacher.id).map((t) => t.username).filter(Boolean) as string[]
+      );
+      savedTeacher = { ...savedTeacher, username: pickUsername(savedTeacher.name, taken) };
+      const withLogin = savedTeacher;
+      setTeachersList((prev) => prev.map((t) => (t.id === withLogin.id ? withLogin : t)));
     }
 
     setIsAddTeacherOpen(false);
@@ -364,7 +401,31 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     });
 
     const remote = await upsertTeacher(savedTeacher);
-    notifySync(`Data guru ${savedTeacher.name}`, editingTeacher ? 'diperbarui' : 'ditambahkan', remote);
+    notifySync(
+      `Data guru ${savedTeacher.name}`,
+      editingTeacher ? 'diperbarui' : 'ditambahkan',
+      remote,
+      !savedTeacher.nip && !editingTeacher
+        ? `Akun login: ${savedTeacher.username} • kata sandi ${DEFAULT_NO_NIP_PASSWORD}.`
+        : undefined
+    );
+  };
+
+  // Forgotten password: back to the default (NIP / 123456 / NISN). The user
+  // can then log in and set a new one in Pengaturan Akun.
+  const handleResetTeacherPassword = async (teacher: TeacherRecord) => {
+    const def = teacher.nip ? 'NIP-nya' : DEFAULT_NO_NIP_PASSWORD;
+    if (!confirm(`Kembalikan kata sandi ${teacher.name} ke bawaan (${def})?`)) return;
+    const updated: TeacherRecord = { ...teacher, passwordHash: undefined };
+    setTeachersList((prev) => prev.map((t) => (t.id === teacher.id ? updated : t)));
+    notifySync(`Kata sandi ${teacher.name}`, `dikembalikan ke bawaan (${def})`, await upsertTeacher(updated));
+  };
+
+  const handleResetParentPassword = async (murid: MuridRecord) => {
+    if (!confirm(`Kembalikan kata sandi akun orang tua ${murid.name} ke bawaan (NISN ${murid.nisn})?`)) return;
+    const updated: MuridRecord = { ...murid, parentPasswordHash: undefined };
+    setMuridList((prev: MuridRecord[]) => prev.map((m) => (m.id === murid.id ? updated : m)));
+    notifySync(`Kata sandi orang tua ${murid.name}`, 'dikembalikan ke bawaan (NISN)', await upsertMurid(updated));
   };
 
   const handleDeleteTeacher = async (id: string, name: string) => {
@@ -501,6 +562,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     const matchesSearch =
       t.name.toLowerCase().includes(searchTeacher.toLowerCase()) ||
       t.nip.toLowerCase().includes(searchTeacher.toLowerCase()) ||
+      (t.username || '').includes(searchTeacher.toLowerCase()) ||
       t.rombel.toLowerCase().includes(searchTeacher.toLowerCase());
 
     if (!matchesSearch) return false;
@@ -596,7 +658,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     Pimpinan Satuan Pendidikan
                   </span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold font-serif">Fahmawati, S.Pd.</h1>
+                <h1 className="text-xl sm:text-2xl font-bold font-serif">{principalName}</h1>
                 <p className="text-xs text-slate-300 mt-0.5">
                   Kepala Sekolah • Penanggung Jawab Mutu, Manajemen Guru & Data Murid
                 </p>
@@ -902,7 +964,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                   <ImportReview
                     entity="guru"
                     totalRows={parsedGuru.length}
-                    validNames={guruCheck.valid.map((g) => `${g.name} — NIP ${g.nip}`)}
+                    validNames={guruCheck.valid.map((g) => `${g.name} — ${g.nip ? `NIP ${g.nip}` : 'tanpa NIP (login dengan nama depan)'}`)}
                     errors={guruCheck.errors}
                     onCancel={() => setParsedGuru([])}
                     onImport={handleImportGuru}
@@ -954,8 +1016,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                             </div>
                           )}
                           <div>
-                            <p className="font-bold text-slate-900">Fahmawati, S.Pd.</p>
-                            <p className="text-[10px] text-slate-500">NIP. 197305111995012002</p>
+                            <p className="font-bold text-slate-900">{principalName}</p>
+                            <p className="text-[10px] text-slate-500">NIP. {PRINCIPAL_NIP}</p>
                           </div>
                         </div>
                       </td>
@@ -995,7 +1057,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                             )}
                             <div>
                               <p className="font-bold text-slate-900">{teacher.name}</p>
-                              <p className="text-[10px] text-slate-500">NIP. {teacher.nip}</p>
+                              <p className="text-[10px] text-slate-500">
+                                {teacher.nip ? (
+                                  <>NIP. {teacher.nip}</>
+                                ) : (
+                                  <>
+                                    Tanpa NIP • login: <span className="font-mono font-bold text-slate-700">{teacher.username || '-'}</span>
+                                  </>
+                                )}
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                Sandi: {teacher.passwordHash ? 'sudah diganti' : teacher.nip ? 'bawaan (NIP)' : `bawaan (${DEFAULT_NO_NIP_PASSWORD})`}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -1076,6 +1149,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                             >
                               <span className="material-symbols-outlined text-base">edit</span>
                             </button>
+                            {teacher.passwordHash && (
+                              <button
+                                onClick={() => handleResetTeacherPassword(teacher)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-700"
+                                title="Kembalikan kata sandi ke bawaan"
+                              >
+                                <span className="material-symbols-outlined text-base">lock_reset</span>
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
                               className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
@@ -1302,6 +1384,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                                 <p className="text-[10px] text-slate-500">
                                   NISN: {murid.nisn} • NIS: {murid.nis}
                                 </p>
+                                <p className="text-[10px] text-slate-400">
+                                  Sandi akun orang tua: {murid.parentPasswordHash ? 'sudah diganti' : 'bawaan (NISN)'}
+                                </p>
                                 {(murid.tanggalLahir || murid.alamat) && (
                                   <p className="text-[10px] text-slate-400">
                                     {murid.tanggalLahir && <>Lahir: {murid.tanggalLahir}</>}
@@ -1378,6 +1463,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                               >
                                 <span className="material-symbols-outlined text-base">edit</span>
                               </button>
+                              {murid.parentPasswordHash && (
+                                <button
+                                  onClick={() => handleResetParentPassword(murid)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-700"
+                                  title="Kembalikan kata sandi orang tua ke bawaan (NISN)"
+                                >
+                                  <span className="material-symbols-outlined text-base">lock_reset</span>
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteMurid(murid.id, murid.name)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
@@ -1652,10 +1746,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">NIP (Nomor Induk Pegawai):</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  NIP (Nomor Induk Pegawai) <span className="font-normal text-slate-400">— kosongkan bila belum punya</span>:
+                </label>
                 <input
                   type="text"
-                  required
                   placeholder="19840212 200801 2 018"
                   value={teacherForm.nip}
                   onChange={(e) => setTeacherForm({ ...teacherForm, nip: e.target.value })}

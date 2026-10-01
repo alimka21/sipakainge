@@ -470,6 +470,7 @@ of this file / the session that added this) found:
   with no time zone, i.e. wrong on any server not already set to WITA).
 
 ## Login: identifier + password (since 2026-09-28) — `LoginPortalView.tsx` / `App.tsx`
+> Updated 2026-10-01: NIP/NISN is now only the *default* password and guru without NIP use a username — see "Accounts" below.
 **The password field used to be pure decoration.** `LoginPortalView.tsx`'s
 `handleSubmit` called `onLogin(selectedRole, identifier)` — the `password`
 state existed and rendered a real `<input type="password">`, but was never
@@ -503,6 +504,69 @@ Sekolah unconditionally. Only `guru` (NIP → `teachersList`) and `orang_tua`
   `Modals.tsx`, `TeacherSupervisionDashboardView.tsx`, `ParentDashboardView.tsx`,
   `UserManagementView.tsx` — not migrated to the constant (out of scope for
   this fix, those are cosmetic, not auth-checked).
+
+## Accounts: username for guru without NIP, hashed passwords, Pengaturan Akun (since 2026-10-01)
+Supersedes the "password = identifier" rule in the Login section above — the
+NIP/NISN is now only the *default* password. All logic in `src/lib/accounts.ts`.
+- **Guru without NIP**: `TeacherRecord.nip` is `''` and the guru logs in with
+  `username` = first name, lowercased (`usernameBase`: text after a comma is
+  dropped, leading titles like Ibu/Hj./Dra./Drs. skipped, non-alphanumerics
+  removed — "Hj. Ratna Sari Dewi, S.Pd." → `ratna`). Collisions get `ratna2`,
+  `ratna3` (`pickUsername`). Default password `DEFAULT_NO_NIP_PASSWORD` =
+  `123456`. The username is **stored** (`teachers.username`, unique partial
+  index) and never re-derived, so renaming a guru doesn't change their login.
+  Assigned at: teacher form save (`UserManagementView.handleSaveTeacher`), CSV
+  import (`withUsernames` over the whole list), and App hydration (older rows
+  without one get one, written back via `upsertTeachers`). `withUsernames`
+  processes in id order (ids are time-based) so the older Ratna keeps `ratna`.
+  NIP is optional in the form and CSV (`validateGuruRows` only dedups non-empty
+  NIPs); the form also rejects a NIP already used by another guru.
+- **Login** (`App.tsx onLogin`, now async): `findTeacherByLogin` — a guru
+  WITH a NIP logs in only with the NIP (default password = NIP, changeable in
+  Pengaturan Akun); the username (case-insensitive) is accepted only for a
+  guru without NIP, so a guru given a NIP later can't keep using the old
+  username. Password check =
+  `checkAccountPassword(input, storedHash, default, normalize)`: if a custom
+  hash exists, verify it; else compare to the default (NIP / `123456` / NISN).
+  The "(Nama)" strip (`normalizeIdNumber`) applies only to the default-NIP
+  comparison, never to a custom password.
+- **Hashing**: salted SHA-256 via Web Crypto (`crypto.subtle`, no dependency),
+  stored as `"<16-hex salt>$<64-hex>"`. Columns: `teachers.password_hash`,
+  `murid.parent_password_hash`, `school_settings.principal_password_hash`;
+  NULL = default password. Still client-side auth (anon key can read the
+  hashes) — not a substitute for Supabase Auth.
+- **Pengaturan Akun** (`AccountSettingsView.tsx`, ScreenId `account_settings`,
+  all 3 roles in `routes.ts`): reached from sidebar "Akun Saya" and by clicking
+  the header profile block. Change name (KS → `principalName` state +
+  `school_settings.principal_name`; guru → `teachers.name` + initials; orang
+  tua → `murid.parentName`, shown in the header) and password (old password
+  required, min 6). Name saves are optimistic like other CRUD; **a new password
+  is only applied to local state after it's stored**, otherwise a reload
+  would lock the user out.
+- **Principal name is now state**, not the hardcoded "Fahmawati, S.Pd." that
+  was in ~20 places: `principalName` (App, hydrated from `getSchoolSettings`)
+  is passed as a prop with `PRINCIPAL_NAME` as fallback to AppHeader,
+  LoginPortal, BeritaAcaraModal, Landing, ParentDashboard, ParentPortfolio
+  (signature), TeacherSupervisionDashboard, UserManagement,
+  ObservationForm/TeacherSelfSupervision (default supervisor for new
+  sessions). `PRINCIPAL_NIP` stays a constant (login ID isn't editable).
+- **Reset (lupa kata sandi)**: KS sees a `lock_reset` button on guru/murid rows
+  in Manajemen Pengguna when that account has a custom password → sets the hash
+  back to NULL. The KS's own password can only be reset by clearing
+  `school_settings.principal_password_hash` in Supabase.
+- **DB not yet migrated**: `upsertWithAccountFallback` in `supabase.ts` retries
+  guru/murid upserts without the account columns when PostgREST rejects them
+  (returns `accountColumnsMissing: true`), so ordinary saves keep working;
+  password changes then show "jalankan ulang Script SQL". `getSchoolSettings`
+  uses `select('*')` so it works on either schema. As of 2026-10-01 the live DB
+  did NOT have the columns yet (verified read-only).
+- `handleRoleChange` (dev role switcher) is not wired to any UI button, so a
+  logged-in user can't jump to another role without its password.
+- Verified: 23 unit checks on `accounts.ts`; PGlite run of the schema (fresh
+  ×2 and legacy upgrade; duplicate username blocked); 37-step jsdom e2e of the
+  real `<App/>` (KS/guru-without-NIP/guru-with-NIP/orang-tua: default login,
+  wrong password, rename, change password, old password rejected, reset).
+  Test harness lives in the session scratchpad, not the repo.
 
 ## PDF export — `window.print()` + Tailwind `print:` variants (since 2026-09-28)
 No PDF library was added (stack constraint). Both PDF-download features reuse

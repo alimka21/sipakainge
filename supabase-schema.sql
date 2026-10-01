@@ -52,6 +52,11 @@ CREATE TABLE IF NOT EXISTS public.school_settings (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Kata sandi Kepala Sekolah yang sudah diganti (hash SHA-256 bergaram).
+-- NULL = kata sandi bawaan (NIP Kepala Sekolah).
+ALTER TABLE public.school_settings
+    ADD COLUMN IF NOT EXISTS principal_password_hash TEXT;
+
 
 -- ------------------------------------------------------------------------------
 -- 3. GURU & OBSERVER (teachers)
@@ -83,7 +88,14 @@ ALTER TABLE public.teachers
     ADD COLUMN IF NOT EXISTS score NUMERIC(3, 2),
     ADD COLUMN IF NOT EXISTS notes TEXT,
     ADD COLUMN IF NOT EXISTS assigned_observer_name TEXT,
-    ADD COLUMN IF NOT EXISTS assigned_at TEXT;
+    ADD COLUMN IF NOT EXISTS assigned_at TEXT,
+    -- Akun guru: guru tanpa NIP login dengan username (nama depan, mis. "ratna").
+    -- password_hash NULL = kata sandi bawaan (NIP, atau "123456" bila tanpa NIP).
+    ADD COLUMN IF NOT EXISTS username TEXT,
+    ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS teachers_username_unik
+    ON public.teachers (username) WHERE username IS NOT NULL;
 
 
 -- ------------------------------------------------------------------------------
@@ -129,7 +141,9 @@ ALTER TABLE public.murid
     ADD COLUMN IF NOT EXISTS avatar TEXT,
     ADD COLUMN IF NOT EXISTS habits JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN IF NOT EXISTS prayers JSONB NOT NULL DEFAULT '{}'::jsonb,
-    ADD COLUMN IF NOT EXISTS notes TEXT;
+    ADD COLUMN IF NOT EXISTS notes TEXT,
+    -- Kata sandi akun orang tua yang sudah diganti. NULL = bawaan (NISN Ananda).
+    ADD COLUMN IF NOT EXISTS parent_password_hash TEXT;
 
 
 -- ------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRecord } from '../types';
-import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
+import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID, PRINCIPAL_NAME } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { uploadRPPDocument } from '../lib/supabase';
 import { formatWitaDate, getAcademicPeriod } from '../lib/time';
@@ -14,6 +14,7 @@ interface TeacherSelfSupervisionViewProps {
   onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
   teacherList?: TeacherRecord[];
   guruId?: string;
+  principalName?: string;
 }
 
 export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProps> = ({
@@ -24,6 +25,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   onUpdateMuridList,
   teacherList = INITIAL_TEACHERS,
   guruId,
+  principalName = PRINCIPAL_NAME,
 }) => {
   // Fallback to local state if parent did not provide muridList
   const [localMuridList, setLocalMuridList] = useState<MuridRecord[]>(INITIAL_MURID);
@@ -53,7 +55,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     tanggal: '',
     jam: teacher.scheduleTime,
     lokasi: 'Ruang Kelas ' + teacher.rombel.split(' ')[1] || 'Ruang Kelas',
-    supervisor: 'Fahmawati, S.Pd. (Kepala Sekolah)',
+    supervisor: `${principalName} (Kepala Sekolah)`,
     catatanAwal: '',
     rppFileName: '',
     rppFileSize: '',
@@ -94,7 +96,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     setDraftTanggal(activeSession.tanggal || '');
     setDraftJam(activeSession.jam || teacher.scheduleTime);
     setDraftLokasi(activeSession.lokasi || 'Ruang ' + teacher.rombel);
-    setDraftSupervisor(activeSession.supervisor || 'Fahmawati, S.Pd. (Kepala Sekolah)');
+    setDraftSupervisor(activeSession.supervisor || `${principalName} (Kepala Sekolah)`);
     setDraftCatatanAwal(activeSession.catatanAwal || '');
   }, [selectedTeacherId, activeSession.status]);
 

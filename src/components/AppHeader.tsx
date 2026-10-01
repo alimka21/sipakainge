@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserRole, ScreenId } from '../types';
 import { SchoolLogo } from './SchoolLogo';
 import { getAcademicPeriod } from '../lib/time';
+import { PRINCIPAL_NAME } from '../data/mockData';
 
 interface AppHeaderProps {
   userRole: UserRole;
@@ -13,6 +14,8 @@ interface AppHeaderProps {
   guruName?: string;
   childName?: string;
   childClass?: string;
+  parentName?: string;
+  principalName?: string;
   onLogout?: () => void;
 }
 
@@ -26,6 +29,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   guruName = 'Guru',
   childName = 'Orang Tua Murid',
   childClass,
+  parentName,
+  principalName = PRINCIPAL_NAME,
   onLogout,
 }) => {
   const guruInitials = guruName
@@ -72,13 +77,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Right: Role, Notifications, Avatar */}
         <div className="flex items-center gap-2 sm:gap-3.5">
 
-          {/* User Profile Block */}
-          <div className="flex items-center gap-2 pl-1 border-r border-slate-100 pr-2 sm:pr-3">
+          {/* User Profile Block — opens Pengaturan Akun */}
+          <button
+            type="button"
+            onClick={() => onNavigate('account_settings')}
+            title="Pengaturan Akun (ubah nama & kata sandi)"
+            className="flex items-center gap-2 pl-1 border-r border-slate-100 pr-2 sm:pr-3 rounded-xl hover:bg-slate-50 transition"
+          >
             {userRole === 'kepala_sekolah' ? (
               <>
                 <div className="text-right hidden md:block">
                   <div className="text-xs text-slate-900 leading-tight font-bold">
-                    Fahmawati, S.Pd.
+                    {principalName}
                   </div>
                   <div className="text-[10px] text-slate-500">Kepala Sekolah (Super Admin)</div>
                 </div>
@@ -90,7 +100,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   />
                 ) : (
                   <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs ring-2 ring-teal-600/30 shrink-0">
-                    F
+                    {principalName.trim()[0]?.toUpperCase() || 'K'}
                   </div>
                 )}
               </>
@@ -110,9 +120,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <>
                 <div className="text-right hidden md:block">
                   <div className="text-xs text-slate-900 leading-tight font-bold">
-                    {childName}
+                    {parentName || `Orang Tua ${childName}`}
                   </div>
-                  <div className="text-[10px] text-slate-500">{childClass ? `Murid ${childClass}` : 'Orang Tua Murid'}</div>
+                  <div className="text-[10px] text-slate-500">
+                    {parentName ? `Orang Tua ${childName}${childClass ? ` • ${childClass}` : ''}` : childClass ? `Murid ${childClass}` : 'Orang Tua Murid'}
+                  </div>
                 </div>
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center ring-2 ring-teal-600/30 shrink-0">
                   <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -121,7 +133,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 </div>
               </>
             )}
-          </div>
+          </button>
 
           {/* Red Logout Button with Confirmation Trigger */}
           <button
@@ -153,7 +165,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               Apakah Anda yakin ingin keluar dari akun{' '}
               <strong className="text-slate-900">
                 {userRole === 'kepala_sekolah'
-                  ? 'Fahmawati, S.Pd. (Kepala Sekolah)'
+                  ? `${principalName} (Kepala Sekolah)`
                   : userRole === 'guru'
                   ? `${guruName} (Guru)`
                   : `Orang Tua dari ${childName}`}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types';
-import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
+import { APP_ASSETS, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
 import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs } from '../lib/supervisionStateMachine';
 import { getAcademicPeriod } from '../lib/time';
@@ -15,6 +15,7 @@ interface ObservationFormViewProps {
   selectedTeacherId?: string;
   onSelectTeacherId?: (id: string) => void;
   teacherList?: TeacherRecord[];
+  principalName?: string;
 }
 
 // 17 Komponen Kelengkapan Perangkat Pembelajaran (Doc 1)
@@ -96,6 +97,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
   selectedTeacherId: propSelectedTeacherId,
   onSelectTeacherId,
   teacherList = INITIAL_TEACHERS,
+  principalName = PRINCIPAL_NAME,
 }) => {
   // 1. Selector for current active teacher / session
   const [localTeacherId, setLocalTeacherId] = useState<string>('');
@@ -118,7 +120,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
     tanggal: '',
     jam: '',
     lokasi: currentTeacher?.rombel ? `Ruang ${currentTeacher.rombel}` : '',
-    supervisor: 'Fahmawati, S.Pd. (Kepala Sekolah)',
+    supervisor: `${principalName} (Kepala Sekolah)`,
     catatanAwal: '',
     rppFileName: '',
     rppFileSize: '',

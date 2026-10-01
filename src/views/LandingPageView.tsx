@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScreenId } from '../types';
-import { APP_ASSETS } from '../data/mockData';
+import { APP_ASSETS, PRINCIPAL_NAME } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
 import { SchoolLogo } from '../components/SchoolLogo';
 import { witaParts } from '../lib/time';
@@ -10,6 +10,7 @@ interface LandingPageViewProps {
   principalPhotoUrl?: string;
   totalMurid?: number;
   totalGuru?: number;
+  principalName?: string;
 }
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({
@@ -17,6 +18,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   principalPhotoUrl,
   totalMurid = 0,
   totalGuru = 0,
+  principalName = PRINCIPAL_NAME,
 }) => {
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col">
@@ -153,7 +155,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
                   <div className="relative w-full rounded-xl overflow-hidden aspect-square shadow-inner bg-slate-100">
                     <img
-                      alt="Ibu Fahmawati, S.Pd."
+                      alt={principalName}
                       className="w-full h-full object-cover"
                       src={principalPhotoUrl || APP_ASSETS.principalPhoto}
                     />
@@ -162,7 +164,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                       <span className="inline-block px-2 py-0.5 rounded bg-[#00685f]/90 text-[11px] uppercase tracking-wider font-semibold mb-1">
                         Kepemimpinan Transformatif
                       </span>
-                      <p className="text-lg font-bold leading-tight">Fahmawati, S.Pd.</p>
+                      <p className="text-lg font-bold leading-tight">{principalName}</p>
                       <p className="text-xs opacity-90">Kepala UPT SPF SDN Percontohan PAM Makassar</p>
                     </div>
                   </div>

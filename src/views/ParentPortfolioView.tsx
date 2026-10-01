@@ -13,6 +13,7 @@ interface ParentPortfolioViewProps {
   rombelList?: RombelRecord[];
   guruId?: string;
   teacherList?: TeacherRecord[];
+  principalName?: string;
 }
 
 export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
@@ -24,6 +25,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
   rombelList = INITIAL_ROMBEL,
   guruId,
   teacherList = INITIAL_TEACHERS,
+  principalName = PRINCIPAL_NAME,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'radar' | 'habits' | 'academic' | 'artifacts' | 'awards'
@@ -786,7 +788,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
             </div>
             <div className="text-center space-y-16">
               <p>Kepala Sekolah,</p>
-              <p className="font-bold border-t border-slate-800 pt-1 inline-block px-6">{PRINCIPAL_NAME}</p>
+              <p className="font-bold border-t border-slate-800 pt-1 inline-block px-6">{principalName}</p>
             </div>
           </div>
           </>

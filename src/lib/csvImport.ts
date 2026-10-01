@@ -191,12 +191,12 @@ export const validateGuruRows = (
     const fail = (reason: string) => errors.push({ line, name: name || '(tanpa nama)', reason });
 
     if (!name) return fail('Nama kosong');
-    if (!nip) return fail('NIP kosong');
-    if (existingNip.has(nip)) return fail(`NIP ${nip} sudah terdaftar`);
-    if (seen.has(nip)) return fail(`NIP ${nip} muncul dua kali di file`);
+    // NIP is optional: a guru without NIP gets a username (first name) on import.
+    if (nip && existingNip.has(nip)) return fail(`NIP ${nip} sudah terdaftar`);
+    if (nip && seen.has(nip)) return fail(`NIP ${nip} muncul dua kali di file`);
     if (rombelName && !rombel) return fail(`Kelas "${rombelName}" belum ada di Manajemen Kelas`);
 
-    seen.add(nip);
+    if (nip) seen.add(nip);
     valid.push({
       name,
       nip,

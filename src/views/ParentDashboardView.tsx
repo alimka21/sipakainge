@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 import { formatWitaDate, useNow, getAcademicPeriod, witaParts, BULAN } from '../lib/time';
 
@@ -14,6 +14,7 @@ interface ParentDashboardViewProps {
   rombelList?: RombelRecord[];
   guruId?: string;
   teacherList?: TeacherRecord[];
+  principalName?: string;
 }
 
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
@@ -26,6 +27,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   rombelList = INITIAL_ROMBEL,
   guruId,
   teacherList = INITIAL_TEACHERS,
+  principalName = PRINCIPAL_NAME,
 }) => {
   const isOrangTua = userRole === 'orang_tua';
   const isKS = userRole === 'kepala_sekolah';
@@ -124,7 +126,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   {isKS ? (
                     <img
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-white/20"
-                      alt="Ibu Fahmawati, S.Pd."
+                      alt={principalName}
                       src={principalPhotoUrl || APP_ASSETS.principalPhoto}
                     />
                   ) : (
@@ -153,7 +155,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                     {isKS 
-                      ? `Selamat Datang, Ibu Fahmawati, S.Pd.!` 
+                      ? `Selamat Datang, ${principalName}!` 
                       : `Selamat Datang, Bapak/Ibu Wali dari ${activeMurid.name}!`}
                   </h1>
                   <p className="text-xs sm:text-sm text-white/90 mt-1 leading-relaxed">
@@ -175,7 +177,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                           <span className="material-symbols-outlined text-sm">shield_person</span> Jabatan: Kepala Sekolah
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">badge</span> NIP: 197305111995012002
+                          <span className="material-symbols-outlined text-sm">badge</span> NIP: {PRINCIPAL_NIP}
                         </span>
                       </>
                     ) : (

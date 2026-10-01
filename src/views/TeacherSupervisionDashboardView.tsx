@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScreenId, TeacherRecord } from '../types';
-import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
+import { APP_ASSETS, INITIAL_TEACHERS, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
 import { formatWitaDate, useNow, getAcademicPeriod, recentSemesters } from '../lib/time';
 
@@ -10,6 +10,7 @@ interface TeacherSupervisionDashboardViewProps {
   onOpenReport?: () => void;
   sessionStates?: Record<string, any>;
   teacherList?: TeacherRecord[];
+  principalName?: string;
 }
 
 export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboardViewProps> = ({
@@ -18,6 +19,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   onOpenReport,
   sessionStates,
   teacherList = INITIAL_TEACHERS,
+  principalName = PRINCIPAL_NAME,
 }) => {
   const [selectedSemester, setSelectedSemester] = useState<string>(() => getAcademicPeriod().label);
   const todayLabel = formatWitaDate(useNow());
@@ -195,7 +197,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-xs text-teal-300">
                   <span className="material-symbols-outlined text-base">verified_user</span>
-                  <span>Super Admin & Penanggung Jawab Mutu: <strong>Fahmawati, S.Pd.</strong> (Kepala Sekolah) • NIP. 197305111995012002</span>
+                  <span>Super Admin & Penanggung Jawab Mutu: <strong>{principalName}</strong> (Kepala Sekolah) • NIP. {PRINCIPAL_NIP}</span>
                 </div>
               </div>
 
@@ -482,7 +484,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                               </span>
                             )}
                             <p className="text-[10px] text-slate-500">
-                              Observer: <strong>{teacher.assignedObserverName || 'Fahmawati, S.Pd.'}</strong>
+                              Observer: <strong>{teacher.assignedObserverName || principalName}</strong>
                             </p>
                           </div>
                         </td>
@@ -705,7 +707,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Observer Yang Bertugas</span>
                 <p className="font-bold text-slate-900">
-                  {selectedTeacherModal.assignedObserverName || 'Fahmawati, S.Pd. (Kepala Sekolah)'}
+                  {selectedTeacherModal.assignedObserverName || `${principalName} (Kepala Sekolah)`}
                 </p>
                 <span className="text-[10px] text-teal-700 font-medium">SK Penugasan Observer Semester {getAcademicPeriod().semester}</span>
               </div>
