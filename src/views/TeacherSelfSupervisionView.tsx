@@ -3,7 +3,7 @@ import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRe
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { uploadRPPDocument } from '../lib/supabase';
-import { formatWitaDate } from '../lib/time';
+import { formatWitaDate, getAcademicPeriod } from '../lib/time';
 import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
 
 interface TeacherSelfSupervisionViewProps {
@@ -418,7 +418,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
             <span className="text-slate-300">/</span>
             <span className="text-[#00685f] font-semibold">Supervisi Saya</span>
             <span className="text-slate-300">/</span>
-            <span className="text-slate-600">Tahun Ajaran 2026/2027</span>
+            <span className="text-slate-600">Tahun Ajaran {getAcademicPeriod().tahunAjaran}</span>
           </div>
 
           {/* SIMULATION ZONE CARD */}
@@ -1213,7 +1213,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                         {activeSession.status}
                       </p>
-                      <p className="text-[10px] text-slate-400 mt-2">Tahun Ajaran 2026/2027</p>
+                      <p className="text-[10px] text-slate-400 mt-2">Tahun Ajaran {getAcademicPeriod().tahunAjaran}</p>
                     </div>
                   </div>
 

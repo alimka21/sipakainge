@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScreenId, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
-import { formatWitaDate } from '../lib/time';
+import { formatWitaDate, useNow, getAcademicPeriod, recentSemesters } from '../lib/time';
 
 interface TeacherSupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -19,13 +19,8 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
   sessionStates,
   teacherList = INITIAL_TEACHERS,
 }) => {
-  const [selectedSemester, setSelectedSemester] = useState<string>('Semester Ganjil 2026/2027');
-  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
-
-  useEffect(() => {
-    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const [selectedSemester, setSelectedSemester] = useState<string>(() => getAcademicPeriod().label);
+  const todayLabel = formatWitaDate(useNow());
   const [faseFilter, setFaseFilter] = useState<'all' | 'fase-a' | 'fase-b' | 'fase-c' | 'mapel'>('all');
   const [observerFilter, setObserverFilter] = useState<'all' | 'observer_only' | 'regular_only'>('all');
   const [selectedTeacherModal, setSelectedTeacherModal] = useState<TeacherRecord | null>(null);
@@ -273,9 +268,12 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                   onChange={(e) => setSelectedSemester(e.target.value)}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"
                 >
-                  <option value="Semester Ganjil 2025/2026">Semester Ganjil 2025/2026 (Aktif)</option>
-                  <option value="Semester Genap 2024/2025">Semester Genap 2024/2025</option>
-                  <option value="Semester Ganjil 2024/2025">Semester Ganjil 2024/2025</option>
+                  {recentSemesters(3).map((label, i) => (
+                    <option key={label} value={label}>
+                      {label}
+                      {i === 0 ? ' (Aktif)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -709,7 +707,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                 <p className="font-bold text-slate-900">
                   {selectedTeacherModal.assignedObserverName || 'Fahmawati, S.Pd. (Kepala Sekolah)'}
                 </p>
-                <span className="text-[10px] text-teal-700 font-medium">SK Penugasan Observer Semester Ganjil</span>
+                <span className="text-[10px] text-teal-700 font-medium">SK Penugasan Observer Semester {getAcademicPeriod().semester}</span>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">

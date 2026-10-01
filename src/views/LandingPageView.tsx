@@ -3,6 +3,7 @@ import { ScreenId } from '../types';
 import { APP_ASSETS } from '../data/mockData';
 import { PublicNavbar } from '../components/PublicNavbar';
 import { SchoolLogo } from '../components/SchoolLogo';
+import { witaParts } from '../lib/time';
 
 interface LandingPageViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -788,7 +789,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           </div>
 
           <div className="pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <p>© 2025 UPT SPF SDN Percontohan PAM Kota Makassar. Hak Cipta Dilindungi Undang-Undang.</p>
+            <p>© {witaParts().year} UPT SPF SDN Percontohan PAM Kota Makassar. Hak Cipta Dilindungi Undang-Undang.</p>
             <p className="uppercase tracking-wider text-slate-400 text-[10px]">
               Dinas Pendidikan Kota Makassar • Gerakan Sipakatau, Sipakalebbi, Sipakainge
             </p>

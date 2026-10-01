@@ -1,4 +1,4 @@
-import { TeacherRecord, HabitItem, DayHabitLog, MuridRecord, RombelRecord } from '../types';
+import { TeacherRecord, HabitItem, MuridRecord, RombelRecord } from '../types';
 
 export const APP_ASSETS = {
   logo: '/school_logo.svg',
@@ -124,34 +124,6 @@ export const HABIT_LIST: HabitItem[] = [
     complianceRate: 72,
     timeValue: '21:00',
   },
-];
-
-export const CALENDAR_DAYS: DayHabitLog[] = [
-  { day: 1, dateStr: 'Senin, 1 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 2, dateStr: 'Selasa, 2 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 3, dateStr: 'Rabu, 3 Sep 2025', status: 'mandiri_istimewa', habitsDone: 7, totalHabits: 7 },
-  { day: 4, dateStr: 'Kamis, 4 Sep 2025', status: 'sebagian', habitsDone: 5, totalHabits: 7 },
-  { day: 5, dateStr: 'Jumat, 5 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 6, dateStr: 'Sabtu, 6 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 7, dateStr: 'Minggu, 7 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 8, dateStr: 'Senin, 8 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 9, dateStr: 'Selasa, 9 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 10, dateStr: 'Rabu, 10 Sep 2025', status: 'mandiri_istimewa', habitsDone: 7, totalHabits: 7 },
-  { day: 11, dateStr: 'Kamis, 11 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 12, dateStr: 'Jumat, 12 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 13, dateStr: 'Sabtu, 13 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 14, dateStr: 'Minggu, 14 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 15, dateStr: 'Senin, 15 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 16, dateStr: 'Selasa, 16 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 17, dateStr: 'Rabu, 17 Sep 2025', status: 'sebagian', habitsDone: 6, totalHabits: 7 },
-  { day: 18, dateStr: 'Kamis, 18 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 19, dateStr: 'Jumat, 19 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 20, dateStr: 'Sabtu, 20 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 21, dateStr: 'Minggu, 21 Sep 2025', status: 'mandiri_istimewa', habitsDone: 7, totalHabits: 7 },
-  { day: 22, dateStr: 'Senin, 22 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 23, dateStr: 'Selasa, 23 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 24, dateStr: 'Rabu, 24 Sep 2025', status: 'lengkap', habitsDone: 7, totalHabits: 7 },
-  { day: 25, dateStr: 'Kamis, 25 Sep 2025', status: 'hari_ini', habitsDone: 0, totalHabits: 7 },
 ];
 
 export const INITIAL_MURID: MuridRecord[] = [];

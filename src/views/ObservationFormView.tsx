@@ -3,6 +3,7 @@ import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types'
 import { APP_ASSETS, INITIAL_TEACHERS } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
 import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs } from '../lib/supervisionStateMachine';
+import { getAcademicPeriod } from '../lib/time';
 
 interface ObservationFormViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -1361,7 +1362,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
               "Sipakainge, Sipakalebbi, Sipakatau" — Mengutamakan prinsip transparansi dan pertumbuhan berkelanjutan bagi seluruh pendidik SMPN 6 Moncongloe.
             </p>
             <div className="pt-2 border-t border-white/10 text-[10px] text-slate-400">
-              Sistem Digital Supervisi Akademik © 2026/2027
+              Sistem Digital Supervisi Akademik © {getAcademicPeriod().tahunAjaran}
             </div>
           </div>
         </div>

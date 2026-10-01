@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { TeacherRecord, MuridRecord, DayHabitLog, RombelRecord, PrayerTimesChecklist } from '../types';
 import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { formatWitaShortDate, now } from './time';
 
 // Ambil URL & Key dari Vite Environment Variables atau LocalStorage (setting fleksibel)
 const getSupabaseEnv = () => {
@@ -425,7 +426,7 @@ export async function recordDailyHabit(
           habits: logData.habits || {},
           prayers: logData.prayers || {},
           notes: logData.notes,
-          updated_at: new Date().toISOString(),
+          updated_at: now().toISOString(),
         },
         { onConflict: 'murid_id,date' }
       );
@@ -448,7 +449,7 @@ export async function uploadRPPDocument(file: File): Promise<{
   date: string;
   message?: string;
 }> {
-  const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const dateStr = formatWitaShortDate();
   const sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
   if (isSupabaseConfigured() && supabase) {

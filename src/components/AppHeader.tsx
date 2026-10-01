@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserRole, ScreenId } from '../types';
 import { SchoolLogo } from './SchoolLogo';
+import { getAcademicPeriod } from '../lib/time';
 
 interface AppHeaderProps {
   userRole: UserRole;
@@ -63,7 +64,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </span>
             <span className="text-slate-300 text-xs hidden md:inline">•</span>
             <span className="text-xs text-slate-500 font-medium hidden md:inline">
-              Semester Ganjil TA 2026/2027
+              {getAcademicPeriod().label}
             </span>
           </div>
         </div>

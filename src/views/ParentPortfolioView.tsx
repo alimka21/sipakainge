@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
-import { formatWitaDateTime } from '../lib/time';
+import { formatWitaDateTime, getAcademicPeriod } from '../lib/time';
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -127,29 +127,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       }))
     : [];
 
-  const artifacts = [
-    ...activeArtifacts,
-    {
-      id: 'art-1',
-      title: 'Poster Kampanye: "Hemat Air, Jaga Bumi Kita"',
-      category: 'Proyek Seni & Lingkungan',
-      date: '18 September 2025',
-      icon: '🎨',
-      description:
-        'Karya poster visual perpaduan cat air dan krayon dalam rangka Pekan Peduli Air Bersih UPT SPF SDN Percontohan PAM.',
-      appreciation: 'Dipilih menjadi poster utama di mading sekolah & bernilai 95 oleh Guru Seni.',
-    },
-    {
-      id: 'art-2',
-      title: 'Modul Percobaan Mini Fotosintesis Tumbuhan Hydrilla',
-      category: 'Praktikum Sains Mandiri',
-      date: '12 September 2025',
-      icon: '🔬',
-      description:
-        'Eksperimen membuktikan produksi oksigen pada tumbuhan air saat terkena sinar matahari pagi di laboratorium sekolah.',
-      appreciation: 'Dianugerahi presentasi terbaik dalam kelompok kerja Fase B.',
-    },
-  ];
+  const artifacts = activeArtifacts;
+
 
   // Awards (Dynamic Merger)
   const activeAwards = (activeMurid && (activeMurid as any).achievements)
@@ -163,33 +142,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
       }))
     : [];
 
-  const awards = [
-    ...activeAwards,
-    {
-      id: 'aw-1',
-      title: 'Juara I Lomba Eksperimen Sains Cilik Tingkat Gugus III Makassar',
-      organizer: 'Dinas Pendidikan Kota Makassar',
-      date: 'Agustus 2025',
-      level: 'Kota',
-      badge: 'gold',
-    },
-    {
-      id: 'aw-2',
-      title: 'Duta Pembiasaan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH)',
-      organizer: 'UPT SPF SDN Percontohan PAM Makassar',
-      date: 'September 2025',
-      level: 'Sekolah',
-      badge: 'emerald',
-    },
-    {
-      id: 'aw-3',
-      title: 'Penghargaan Murid Terdisiplin & Gotong Royong Semester Ganjil',
-      organizer: 'Wali Kelas IV-A',
-      date: 'September 2025',
-      level: 'Kelas',
-      badge: 'blue',
-    },
-  ];
+  const awards = activeAwards;
+
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800 print:bg-white print:pb-0">
@@ -339,7 +293,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                         Dapodik Terverifikasi RI
                       </span>
                       <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
-                        Tahun Ajaran 2026/2027
+                        Tahun Ajaran {getAcademicPeriod().tahunAjaran}
                       </span>
                     </div>
 
@@ -660,7 +614,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                     Capaian Tujuan Pembelajaran & Asesmen Sumatif
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Kurikulum Merdeka • Kelas IV-A Semester Ganjil 2025/2026
+                    Kurikulum Merdeka • {activeMurid.rombel} • {getAcademicPeriod().label}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -726,7 +680,12 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {artifacts.map((art) => (
+                {artifacts.length === 0 && (
+                  <p className="md:col-span-2 text-center p-6 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400 italic">
+                    Belum ada karya yang dicatat oleh guru untuk ananda.
+                  </p>
+                )}
+                {artifacts.map((art: any) => (
                   <div
                     key={art.id}
                     className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition"
@@ -784,7 +743,12 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
               </div>
 
               <div className="mt-5 space-y-4">
-                {awards.map((aw) => (
+                {awards.length === 0 && (
+                  <p className="text-center p-6 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400 italic">
+                    Belum ada prestasi yang dicatat untuk ananda.
+                  </p>
+                )}
+                {awards.map((aw: any) => (
                   <div
                     key={aw.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 hover:bg-slate-50 transition"

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
-import { HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
+import { DayHabitLog } from '../types';
+import { witaMonthDays, BULAN } from '../lib/time';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 
 interface ParentCalendarViewProps {
@@ -34,9 +36,24 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   const activeMurid =
     visibleMurid.find((m) => m.id === selectedMuridId) ?? (isKS ? undefined : classMuridList[0]);
 
-  const [selectedDay, setSelectedDay] = useState<number>(25);
+  // Current WITA month from the server-synced clock. Days before today start
+  // as "kosong" — there is no stored daily_habits history to show yet.
+  const [monthInfo] = useState(() => witaMonthDays());
+  const bulanNama = BULAN[monthInfo.month - 1];
+  const [selectedDay, setSelectedDay] = useState<number>(monthInfo.today);
   const [activeFilter, setActiveFilter] = useState<'all' | number>('all');
-  const [daysData, setDaysData] = useState(CALENDAR_DAYS);
+  const [daysData, setDaysData] = useState<DayHabitLog[]>(() =>
+    Array.from({ length: monthInfo.today }, (_, i) => {
+      const day = i + 1;
+      return {
+        day,
+        dateStr: monthInfo.labelFor(day),
+        status: day === monthInfo.today ? 'hari_ini' : 'kosong',
+        habitsDone: 0,
+        totalHabits: 7,
+      };
+    })
+  );
   const [wakeTime, setWakeTime] = useState('05:00');
   const [bedTime, setBedTime] = useState('21:00');
   const [prayersCheck, setPrayersCheck] = useState<Record<string, boolean>>({
@@ -79,18 +96,33 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
             return {
               ...d,
               habitsDone: completedCount,
-              status: completedCount === 7 ? 'lengkap' : completedCount >= 4 ? 'sebagian' : 'hari_ini',
+              status: completedCount === 7 ? 'lengkap' : completedCount >= 4 ? 'sebagian' : d.day === monthInfo.today ? 'hari_ini' : 'kosong',
             };
           }
           return d;
         })
       );
-      showToast(`Kebiasaan #${id} diperbarui untuk tanggal ${selectedDay} September!`);
+      showToast(`Kebiasaan #${id} diperbarui untuk tanggal ${selectedDay} ${bulanNama}!`);
       return next;
     });
   };
 
   const selectedDayLog = daysData.find((d) => d.day === selectedDay);
+
+  const countStatus = (st: DayHabitLog['status']) => daysData.filter((d) => d.status === st).length;
+  const progress = {
+    total: daysData.length,
+    lengkap: countStatus('lengkap'),
+    istimewa: countStatus('mandiri_istimewa'),
+    sebagian: countStatus('sebagian'),
+    kosong: countStatus('kosong') + countStatus('hari_ini'),
+    get terlaksana() {
+      return this.lengkap + this.istimewa + this.sebagian;
+    },
+    pct(n: number) {
+      return daysData.length ? Math.round((n / daysData.length) * 100) : 0;
+    },
+  };
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800">
@@ -326,7 +358,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-teal-700">calendar_month</span>
-                    September 2025
+                    {bulanNama} {monthInfo.year}
                   </h2>
                   <p className="text-xs text-slate-500">
                     Bulan Aktif Pelaksanaan Pembiasaan Mandiri Rumah & Sekolah
@@ -367,6 +399,9 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
 
               {/* Calendar Grid Days */}
               <div className="grid grid-cols-7 gap-2.5 sm:gap-3">
+                {Array.from({ length: monthInfo.leadingBlanks }, (_, i) => (
+                  <div key={`blank-${i}`} aria-hidden="true" />
+                ))}
                 {daysData.map((d) => {
                   const isSelected = selectedDay === d.day;
                   const isToday = d.status === 'hari_ini';
@@ -439,7 +474,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                 })}
 
                 {/* Trailing empty days to complete grid */}
-                {[26, 27, 28, 29, 30].map((day) => (
+                {Array.from({ length: monthInfo.daysInMonth - monthInfo.today }, (_, i) => monthInfo.today + i + 1).map((day) => (
                   <div
                     key={`next-${day}`}
                     className="flex flex-col items-center justify-between rounded-2xl p-2.5 sm:p-3 bg-slate-50/50 opacity-40 ring-1 ring-slate-100 min-h-[76px] sm:min-h-[88px]"
@@ -455,37 +490,22 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-700">
                   <span className="flex items-center gap-1.5 text-teal-800">
                     <span className="material-symbols-outlined text-base">analytics</span>
-                    Progres Keseluruhan 7 KAIH Bulan September
+                    Progres Keseluruhan 7 KAIH Bulan {bulanNama}
                   </span>
-                  <span className="text-teal-700 font-bold">24 dari 25 Hari Terlaksana (96%)</span>
+                  <span className="text-teal-700 font-bold">
+                    {progress.terlaksana} dari {progress.total} Hari Terlaksana ({progress.pct(progress.terlaksana)}%)
+                  </span>
                 </div>
                 <div className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-500"
-                    style={{ width: '80%' }}
-                    title="80% Lengkap Sempurna"
-                  ></div>
-                  <div
-                    className="h-full bg-purple-500 transition-all duration-500"
-                    style={{ width: '12%' }}
-                    title="12% Mandiri Istimewa"
-                  ></div>
-                  <div
-                    className="h-full bg-amber-400 transition-all duration-500"
-                    style={{ width: '4%' }}
-                    title="4% Sebagian"
-                  ></div>
-                  <div
-                    className="h-full bg-slate-300 transition-all duration-500"
-                    style={{ width: '4%' }}
-                    title="4% Belum Diisi"
-                  ></div>
+                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress.pct(progress.lengkap)}%` }} title="Lengkap 7/7"></div>
+                  <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${progress.pct(progress.istimewa)}%` }} title="Mandiri Istimewa"></div>
+                  <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${progress.pct(progress.sebagian)}%` }} title="Sebagian"></div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
-                  <span>20 Hari Lengkap (7/7)</span>
-                  <span>3 Hari Bintang Mandiri</span>
-                  <span>1 Hari Sebagian</span>
-                  <span>1 Hari Sedang Berjalan</span>
+                  <span>{progress.lengkap} Hari Lengkap (7/7)</span>
+                  <span>{progress.istimewa} Hari Bintang Mandiri</span>
+                  <span>{progress.sebagian} Hari Sebagian</span>
+                  <span>{progress.kosong} Hari Belum Diisi</span>
                 </div>
               </div>
             </div>
@@ -560,17 +580,17 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                     Inspeksi Jurnal Harian
                   </span>
                   <h3 className="text-lg font-bold text-slate-900">
-                    {selectedDayLog?.dateStr || `Tanggal ${selectedDay} Sep 2025`}
+                    {selectedDayLog?.dateStr || monthInfo.labelFor(selectedDay)}
                   </h3>
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    selectedDay === 25
+                    selectedDay === monthInfo.today
                       ? 'bg-teal-100 text-teal-800 ring-1 ring-teal-600/20'
                       : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  {selectedDay === 25 ? 'Hari Ini' : 'Terverifikasi'}
+                  {selectedDay === monthInfo.today ? 'Hari Ini' : selectedDayLog && selectedDayLog.habitsDone > 0 ? 'Tercatat' : 'Belum Diisi'}
                 </span>
               </div>
 

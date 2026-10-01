@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScreenId, TeacherRecord, MuridRecord } from '../types';
 import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
-import { formatWitaDate } from '../lib/time';
+import { formatWitaDate, useNow, getAcademicPeriod } from '../lib/time';
 
 interface SupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -25,12 +25,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
   const [localSearch, setLocalSearch] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
-
-  useEffect(() => {
-    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const todayLabel = formatWitaDate(useNow());
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -428,7 +423,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
               Portal Supervisi Akademik Guru
             </span>
             <span className="text-slate-300 text-xs">•</span>
-            <span className="text-xs text-slate-600">Siklus Ganjil 2026/2027</span>
+            <span className="text-xs text-slate-600">Siklus {getAcademicPeriod().semester} {getAcademicPeriod().tahunAjaran}</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0b1c30] tracking-tight">

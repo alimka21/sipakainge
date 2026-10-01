@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MuridRecord, SupervisionSession, TeacherRecord } from '../types';
 import { HABIT_LIST } from '../data/mockData';
+import { getAcademicPeriod } from '../lib/time';
 
 interface BeritaAcaraModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
                 Berita Acara Observasi Pembelajaran
               </h3>
               <p className="text-xs text-slate-500">
-                Siklus Terpadu Supervisi Akademik SIPAKAINGE 2025/2026
+                Siklus Terpadu Supervisi Akademik SIPAKAINGE {getAcademicPeriod().tahunAjaran}
               </p>
             </div>
           </div>

@@ -413,6 +413,42 @@ of this file / the session that added this) found:
   fake scores). Bundled with esbuild in the scratchpad; not committed.
 
 ## Time — `src/lib/time.ts`
+- **Server-synced clock (since 2026-10-01).** Never call `new Date()` /
+  `Date.now()` for anything shown or saved as a date — use `now()` from
+  `time.ts` (or a formatter, which defaults to `now()`). `syncServerTime()`
+  (called by `App.tsx` on mount + every 10 min) does a same-origin `HEAD
+  /?_t=…` and reads the HTTP `Date` header (cross-origin `Date` isn't
+  readable under CORS, so Supabase can't be used for this), storing an offset
+  that `now()` applies — so a laptop/HP with a wrong clock still shows the
+  real WITA date. Before the first sync, `now()` = device time.
+  **Do not add the `Age` header**: Vercel stamps `Date` with the current time
+  even on a cache HIT (verified live: Date = real UTC, Age ≈ 20000s).
+  `Date.now()` for unique IDs (`r-${Date.now()}` etc.) is fine — not a date.
+- `useNow(intervalMs = 30000)` hook: re-renders every interval AND right after
+  a server sync lands. Use it for any live "today"/clock display
+  (`formatWitaDate(useNow())`) — replaces the old per-view
+  `useState + setInterval` copies (removed from `SupervisionDashboardView`,
+  `TeacherSupervisionDashboardView`, `ParentDashboardView`,
+  `ClassHabitsInputView`).
+- `getAcademicPeriod()` → `{ semester: 'Ganjil'|'Genap', tahunAjaran:
+  '2026/2027', label }` (Juli–Des = Ganjil of TA y/y+1, Jan–Jun = Genap of TA
+  y-1/y); `recentSemesters(n)` for semester dropdowns. Every "Semester … /
+  Tahun Ajaran …" label uses these now (AppHeader, Modals, dashboards,
+  TeacherSelfSupervision, ParentPortfolio, footers) — they were hardcoded and
+  inconsistent (mix of 2025/2026 and 2026/2027; TeacherSupervisionDashboard's
+  select state wasn't even one of its options). Never hardcode a TA again.
+- `witaMonthDays()` → current WITA month (`today`, `daysInMonth`,
+  `leadingBlanks` for a Monday-first grid, `labelFor(day)`), `witaParts()`,
+  `formatWitaMonthYear()`, `formatWitaShortDate()`, `BULAN`.
+- `ParentCalendarView` and `StudentProgressDashboardView` used to be frozen at
+  "September 2025, today = 25" with fabricated per-day completion data
+  (`CALENDAR_DAYS` in mockData — now deleted). They now build the current WITA
+  month: days 1..today, past days `'kosong'` (no stored `daily_habits` history
+  exists yet — honest empty, not fake 7/7), today `'hari_ini'`, rest as
+  "Terjadwal". The monthly progress bar is computed from those days.
+- `ParentPortfolioView` appended 2 fake karya + 3 fake prestasi (dated 2025,
+  e.g. "Juara I Lomba Eksperimen Sains") to EVERY student — and they printed
+  in the PDF signed by the KS. Removed; empty-state messages added.
 - WITA (Asia/Makassar, UTC+8) must always be computed with an explicit
   `timeZone`, never assumed from the server/browser's local clock.
   `formatWitaDate`/`formatWitaTime`/`formatWitaDateTime`/`witaDateKey` are the
@@ -584,8 +620,8 @@ above in "Time", just in different components that were missed then. Found
 via `grep` for literal Indonesian month-name date strings, fixed 3 more
 "today"/"last updated" badges:
 - `SupervisionDashboardView.tsx` — header calendar badge ("Kamis, 20 Maret
-  2026" → live `formatWitaDate()` in `todayLabel` state, refreshed every 30s
-  via `useEffect`, same pattern as `ClassHabitsInputView.tsx`'s `selectedDate`).
+  2026" → live `formatWitaDate()`; since 2026-10-01 via the shared `useNow()`
+  hook, see "Time").
 - `TeacherSupervisionDashboardView.tsx` — footer "Terakhir diperbarui: 26
   September 2026" → same `todayLabel` pattern.
 - `ParentDashboardView.tsx` — welcome header "• Minggu, 27 September 2026" →
@@ -608,6 +644,40 @@ via `grep` for literal Indonesian month-name date strings, fixed 3 more
   Indonesian month names (`Januari|Februari|...|Desember`) followed by a
   4-digit year as a literal string in `src/`, excluding `src/lib/time.ts`
   itself (which legitimately contains the format examples in comments).
+
+## Manajemen Kelas / Rombel cleanup (2026-09-29) — `ClassManagementView.tsx`
+User feedback: "kurang rapi" (not tidy) — with 16 classes (`INITIAL_ROMBEL`),
+the old page rendered them in raw array/insertion order in one flat 3-column
+grid, with no way to find a class or see the overall picture at a glance.
+- **Stats strip** (3 small cards under the banner): Total Kelas
+  (`rombelData.length`), Kelas Tanpa Wali Kelas (`waliKelasId == null`
+  count — amber icon if > 0, emerald check if 0), Total Murid Terdaftar (sum
+  of `countMuridByRombel` across all classes).
+- **Sorting**: `parseKelasOrder(name)` regex-parses the standard `Kelas
+  <tingkat>.<rombel>` naming (see "Class list" section above) into
+  `[tingkat, rombel]` and sorts numerically; a custom class name that doesn't
+  match the pattern falls back to alphabetical and sorts after all the
+  numbered ones. Before this, class order was whatever `rombelList` state
+  happened to be in (insertion order), so editing/re-adding classes could
+  visually scramble the list.
+- **Grouped by Fase**: the sorted+filtered list is split into 3 sections (one
+  per `FASE_OPTIONS` entry, in that order), each with a header showing the
+  fase label + class count in that group; a section with zero matching
+  classes is omitted entirely rather than shown empty. The per-card "Fase A
+  (Kelas I-II)" subtitle was removed since the group header now carries that
+  information (was redundant on every card otherwise).
+  Note: a class's fase is still whatever's stored on its `RombelRecord.fase`
+  field, set once at creation/edit time in the form dropdown — it is NOT
+  re-derived from the class name, so grouping trusts that stored value.
+- **Search box** ("Cari nama kelas atau wali kelas...") filters by class name
+  OR the resolved wali kelas name (`teacherName(r.waliKelasId)`), case-
+  insensitive. Three distinct empty states: no classes at all (unchanged
+  "Belum ada kelas..." message), a search with zero matches (new "Tidak ada
+  kelas... yang cocok dengan ..." message), vs. having results (grouped
+  grid).
+- Verified via SSR smoke test (`renderToString` with 4 rombel across all 3
+  fases, out of Fase-A/B/C and numeric order on purpose): section order and
+  numeric sort both correct, stats count correct.
 
 ## Working notes / decisions log
 - 2026-09-28 (session 1): Added standalone sidebar menus (Presensi, Nilai

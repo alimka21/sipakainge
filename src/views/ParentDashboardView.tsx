@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
-import { formatWitaDate } from '../lib/time';
+import { formatWitaDate, useNow, getAcademicPeriod, witaParts, BULAN } from '../lib/time';
 
 interface ParentDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -31,12 +31,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const isKS = userRole === 'kepala_sekolah';
   const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
-  const [todayLabel, setTodayLabel] = useState(() => formatWitaDate());
-
-  useEffect(() => {
-    const interval = setInterval(() => setTodayLabel(formatWitaDate()), 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const todayLabel = formatWitaDate(useNow());
 
   const activeMurid = isOrangTua
     ? visibleMurid[0]
@@ -257,7 +252,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <span className="text-xs uppercase tracking-wider text-slate-400 font-bold">Kehadiran Sekolah</span>
-                  <span className="text-xs text-slate-500 mt-0.5">Semester Ganjil 2026/2027</span>
+                  <span className="text-xs text-slate-500 mt-0.5">{getAcademicPeriod().label}</span>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-[#006947]/10 text-[#006947] flex items-center justify-center">
                   <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -333,7 +328,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <span className="text-xs uppercase tracking-wider text-slate-400 font-bold">Konsistensi 7 KAIH</span>
-                  <span className="text-xs text-slate-500 mt-0.5">Pekan ke-4 September</span>
+                  <span className="text-xs text-slate-500 mt-0.5">Pekan ke-{Math.ceil(witaParts().day / 7)} {BULAN[witaParts().month - 1]}</span>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-[#89f5e7] text-[#005049] flex items-center justify-center">
                   <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>

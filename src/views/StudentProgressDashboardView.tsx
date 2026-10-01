@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId, DayHabitLog, PrayerTimesChecklist, MuridRecord, RombelRecord } from '../types';
-import { APP_ASSETS, HABIT_LIST, CALENDAR_DAYS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { APP_ASSETS, HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
+import { witaMonthDays, BULAN, formatWitaMonthYear } from '../lib/time';
 import { PublicNavbar } from '../components/PublicNavbar';
 
 interface StudentProgressDashboardViewProps {
@@ -17,8 +18,14 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
   muridList = INITIAL_MURID,
 }) => {
   const [filterMode, setFilterMode] = useState<'harian' | 'bulanan'>('harian');
-  const [selectedDay, setSelectedDay] = useState<number>(25);
-  const [selectedMonth, setSelectedMonth] = useState<string>('September 2025');
+  const [monthInfo] = useState(() => witaMonthDays());
+  const bulanNama = BULAN[monthInfo.month - 1];
+  // Current month + the 2 before it (mid-month noon UTC keeps the WITA month unambiguous).
+  const monthOptions = [0, 1, 2].map((back) =>
+    formatWitaMonthYear(new Date(Date.UTC(monthInfo.year, monthInfo.month - 1 - back, 15, 4)))
+  );
+  const [selectedDay, setSelectedDay] = useState<number>(monthInfo.today);
+  const [selectedMonth, setSelectedMonth] = useState<string>(monthOptions[0]);
 
   // Murid selection state
   const [selectedRombel, setSelectedRombel] = useState<string>('Semua Kelas');
@@ -69,24 +76,17 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
       prayersDone: number;
     }>
   >(() => {
-    return Array.from({ length: 25 }, (_, i) => {
+    // Days 1..today of the current WITA month. No stored daily_habits history
+    // exists yet, so rows start empty instead of showing made-up progress.
+    return Array.from({ length: monthInfo.today }, (_, i) => {
       const d = i + 1;
-      const isPast = d < 25;
       return {
         day: d,
-        dateStr: `${d} Sep 2025`,
-        habits: {
-          1: true,
-          2: true,
-          3: isPast ? (d % 3 !== 0) : true,
-          4: true,
-          5: isPast ? (d % 4 !== 0) : true,
-          6: true,
-          7: isPast ? (d % 5 !== 0) : false,
-        },
-        wakeTime: d % 2 === 0 ? '05:00' : '05:15',
-        sleepTime: d % 5 === 0 ? '21:30' : '20:55',
-        prayersDone: isPast ? 8 : 6,
+        dateStr: monthInfo.labelFor(d),
+        habits: { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false },
+        wakeTime: '-',
+        sleepTime: '-',
+        prayersDone: 0,
       };
     });
   });
@@ -141,7 +141,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
         return item;
       })
     );
-    showToast(`Data tanggal ${day} September Kebiasaan #${habitId} diperbarui.`);
+    showToast(`Data tanggal ${day} ${bulanNama} Kebiasaan #${habitId} diperbarui.`);
   };
 
   const completedHabitsCount = Object.values(habitStatus).filter(Boolean).length;
@@ -366,9 +366,9 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   onChange={(e) => setSelectedDay(Number(e.target.value))}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"
                 >
-                  {Array.from({ length: 25 }, (_, i) => i + 1).map((d) => (
+                  {Array.from({ length: monthInfo.today }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>
-                      {d} September 2025 {d === 25 ? '(Hari Ini)' : ''}
+                      {d} {bulanNama} {monthInfo.year} {d === monthInfo.today ? '(Hari Ini)' : ''}
                     </option>
                   ))}
                 </select>
@@ -381,9 +381,12 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"
                 >
-                  <option value="September 2025">September 2025 (Bulan Berjalan)</option>
-                  <option value="Agustus 2025">Agustus 2025</option>
-                  <option value="Juli 2025">Juli 2025</option>
+                  {monthOptions.map((m, i) => (
+                    <option key={m} value={m}>
+                      {m}
+                      {i === 0 ? ' (Bulan Berjalan)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -425,7 +428,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-teal-700">fact_check</span>
-                    Tabel Progres Pembiasaan Harian — {selectedDay} September 2025
+                    Tabel Progres Pembiasaan Harian — {selectedDay} {bulanNama} {monthInfo.year}
                   </h2>
                   <p className="text-xs text-slate-500">
                     Status pembiasaan harian ananda <strong>{activeMurid.name}</strong> ({activeMurid.rombel})
@@ -935,7 +938,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   {monthlyDays.map((row) => {
                     const doneCount = Object.values(row.habits).filter(Boolean).length;
                     const percent = Math.round((doneCount / 7) * 100);
-                    const isToday = row.day === 25;
+                    const isToday = row.day === monthInfo.today;
 
                     return (
                       <tr

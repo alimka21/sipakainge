@@ -41,6 +41,7 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
   const [formName, setFormName] = useState('');
   const [formFase, setFormFase] = useState<RombelRecord['fase']>('fase-a');
   const [formWaliKelasId, setFormWaliKelasId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const updateRombel = (updater: (prev: RombelRecord[]) => RombelRecord[]) => {
     setRombelData(updater);
@@ -148,6 +149,34 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
     (t) => !assignedElsewhere.has(t.id) || t.id === formWaliKelasId
   ).length;
 
+  // "Kelas <tingkat>.<rombel>" (the standard naming since 2026-09-28) sorts
+  // naturally by tingkat then rombel number; anything else (a custom class
+  // name) falls back to alphabetical and sorts after the numbered ones.
+  const parseKelasOrder = (name: string): [number, number] | null => {
+    const m = name.match(/^Kelas\s+(\d+)\.(\d+)$/i);
+    if (!m) return null;
+    return [parseInt(m[1], 10), parseInt(m[2], 10)];
+  };
+
+  const sortedRombel = [...rombelData].sort((a, b) => {
+    const oa = parseKelasOrder(a.name);
+    const ob = parseKelasOrder(b.name);
+    if (oa && ob) return oa[0] - ob[0] || oa[1] - ob[1];
+    if (oa) return -1;
+    if (ob) return 1;
+    return a.name.localeCompare(b.name, 'id');
+  });
+
+  const query = searchQuery.trim().toLowerCase();
+  const visibleRombel = query
+    ? sortedRombel.filter(
+        (r) => r.name.toLowerCase().includes(query) || (teacherName(r.waliKelasId) || '').toLowerCase().includes(query)
+      )
+    : sortedRombel;
+
+  const kelasTanpaWali = rombelData.filter((r) => !r.waliKelasId).length;
+  const totalMuridTerdaftar = rombelData.reduce((sum, r) => sum + countMuridByRombel(r.name), 0);
+
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20 text-slate-800 font-['Plus_Jakarta_Sans',sans-serif]">
       {toastMessage && (
@@ -182,6 +211,37 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
               <p className="text-xs text-teal-100/90 mt-1 max-w-2xl leading-relaxed">
                 Tambah, ubah, atau hapus rombongan belajar (rombel), serta tentukan wali kelas untuk masing-masing kelas.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200/80 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-lg">school</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Kelas</p>
+              <p className="text-lg font-extrabold text-slate-900">{rombelData.length}</p>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200/80 flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${kelasTanpaWali > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              <span className="material-symbols-outlined text-lg">{kelasTanpaWali > 0 ? 'warning' : 'check_circle'}</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Kelas Tanpa Wali Kelas</p>
+              <p className="text-lg font-extrabold text-slate-900">{kelasTanpaWali}</p>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200/80 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-lg">groups</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Murid Terdaftar</p>
+              <p className="text-lg font-extrabold text-slate-900">{totalMuridTerdaftar}</p>
             </div>
           </div>
         </div>
@@ -287,72 +347,101 @@ export const ClassManagementView: React.FC<ClassManagementViewProps> = ({
         )}
 
         {/* List */}
-        <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center justify-between">
-            <span>Daftar Kelas / Rombel</span>
-            <span className="rounded-full bg-teal-50 text-teal-800 px-3 py-1 text-xs font-bold">
-              {rombelData.length} Kelas
-            </span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rombelData.map((rombel) => {
-              const wali = teacherName(rombel.waliKelasId);
-              return (
-                <div
-                  key={rombel.id}
-                  className="rounded-2xl p-4 border border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900">{rombel.name}</h4>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">
-                        {FASE_OPTIONS.find((f) => f.value === rombel.fase)?.label || rombel.fase}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-teal-100 text-teal-800 px-2.5 py-0.5 text-[10px] font-bold shrink-0">
-                      {countMuridByRombel(rombel.name)} Murid
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-white p-2.5 border border-slate-100">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Wali Kelas</p>
-                    {wali ? (
-                      <p className="text-xs font-bold text-slate-800 mt-0.5">{wali}</p>
-                    ) : (
-                      <p className="text-xs font-semibold text-amber-600 mt-0.5 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">warning</span>
-                        Belum Ditentukan
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => startEdit(rombel)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-bold hover:bg-slate-100 transition"
-                    >
-                      <span className="material-symbols-outlined text-sm">edit</span>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(rombel)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[11px] font-bold hover:bg-red-50 transition"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                      Hapus
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {rombelData.length === 0 && (
-              <div className="col-span-full text-center p-8 border border-dashed border-slate-200 bg-slate-50 rounded-2xl text-slate-400 text-xs italic">
-                Belum ada kelas/rombel yang ditambahkan. Klik "Tambah Kelas Baru" untuk memulai.
-              </div>
-            )}
+        <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/80 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span>Daftar Kelas / Rombel</span>
+              <span className="rounded-full bg-teal-50 text-teal-800 px-3 py-1 text-xs font-bold">
+                {rombelData.length} Kelas
+              </span>
+            </h3>
+            <div className="relative sm:w-64">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari nama kelas atau wali kelas..."
+                className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600"
+              />
+            </div>
           </div>
+
+          {rombelData.length === 0 ? (
+            <div className="text-center p-8 border border-dashed border-slate-200 bg-slate-50 rounded-2xl text-slate-400 text-xs italic">
+              Belum ada kelas/rombel yang ditambahkan. Klik "Tambah Kelas Baru" untuk memulai.
+            </div>
+          ) : visibleRombel.length === 0 ? (
+            <div className="text-center p-8 border border-dashed border-slate-200 bg-slate-50 rounded-2xl text-slate-400 text-xs italic">
+              Tidak ada kelas atau wali kelas yang cocok dengan "{searchQuery}".
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {FASE_OPTIONS.map((faseOpt) => {
+                const group = visibleRombel.filter((r) => r.fase === faseOpt.value);
+                if (group.length === 0) return null;
+                return (
+                  <div key={faseOpt.value} className="space-y-3">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                      <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                        {faseOpt.label}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-semibold">({group.length} kelas)</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {group.map((rombel) => {
+                        const wali = teacherName(rombel.waliKelasId);
+                        return (
+                          <div
+                            key={rombel.id}
+                            className="rounded-2xl p-4 border border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="font-bold text-sm text-slate-900">{rombel.name}</h4>
+                              <span className="rounded-full bg-teal-100 text-teal-800 px-2.5 py-0.5 text-[10px] font-bold shrink-0">
+                                {countMuridByRombel(rombel.name)} Murid
+                              </span>
+                            </div>
+
+                            <div className="rounded-xl bg-white p-2.5 border border-slate-100">
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">Wali Kelas</p>
+                              {wali ? (
+                                <p className="text-xs font-bold text-slate-800 mt-0.5">{wali}</p>
+                              ) : (
+                                <p className="text-xs font-semibold text-amber-600 mt-0.5 flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-xs">warning</span>
+                                  Belum Ditentukan
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                onClick={() => startEdit(rombel)}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-bold hover:bg-slate-100 transition"
+                              >
+                                <span className="material-symbols-outlined text-sm">edit</span>
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(rombel)}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[11px] font-bold hover:bg-red-50 transition"
+                              >
+                                <span className="material-symbols-outlined text-sm">delete</span>
+                                Hapus
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

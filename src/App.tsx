@@ -11,6 +11,7 @@ import { BeritaAcaraModal, QuickRecordModal } from './components/Modals';
 import { EmptyDataNotice } from './components/EmptyDataNotice';
 import { getGuruClass, getVisibleMurid } from './lib/access';
 import { normalizeNip } from './lib/csvImport';
+import { syncServerTime } from './lib/time';
 import { resolveNavigation, ROLE_HOME, PUBLIC_HOME, NavContext } from './lib/routes';
 import { getTeachersData, getMuridData, getRombelData, getPrincipalPhoto, isSupabaseConfigured } from './lib/supabase';
 import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS, PRINCIPAL_NIP } from './data/mockData';
@@ -66,6 +67,13 @@ export default function App() {
       setToastMessage(null);
     }, 3500);
   };
+
+  // Samakan jam aplikasi dengan jam server (bukan jam perangkat), ulangi tiap 10 menit.
+  useEffect(() => {
+    syncServerTime();
+    const id = setInterval(syncServerTime, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Muat data guru, murid, dan kelas dari Supabase saat aplikasi dibuka —
   // tanpa ini, layar selalu mulai kosong (state React tidak persisten across
