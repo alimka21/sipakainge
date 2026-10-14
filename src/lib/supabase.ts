@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { TeacherRecord, MuridRecord, DayHabitLog, RombelRecord, PrayerTimesChecklist } from '../types';
+import { TeacherRecord, MuridRecord, DayHabitLog, RombelRecord, PrayerTimesChecklist, SupervisionSession } from '../types';
 import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL } from '../data/mockData';
-import { formatWitaShortDate, now } from './time';
+import { formatWitaDate, formatWitaDateTime, formatWitaShortDate, getAcademicPeriod, now, witaDateKey } from './time';
 
 // Ambil URL & Key dari Vite Environment Variables atau LocalStorage (setting fleksibel)
 const getSupabaseEnv = () => {
@@ -557,3 +557,444 @@ export async function uploadRPPDocument(file: File): Promise<{
   };
 }
 
+
+// ==============================================================================
+// DATA HARIAN MURID — 7 KAIH, presensi, nilai, portofolio, prestasi
+// Di aplikasi data ini menempel ad hoc di objek murid (`(m as any).attendance`
+// dst., lihat CLAUDE.md); di database masing-masing punya tabel sendiri.
+// `syncMuridChanges(prev, next)` membandingkan dua versi daftar murid dan hanya
+// menulis yang berubah, jadi view cukup memanggil onUpdateMuridList seperti biasa.
+// ==============================================================================
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** ID untuk catatan baru (presensi/nilai/portofolio/prestasi) — kolom `id` di DB bertipe UUID. */
+export function newRecordId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+const PRESTASI_TINGKAT = ['Kelas', 'Sekolah', 'Kecamatan', 'Kota', 'Provinsi', 'Nasional'];
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+// 'YYYY-MM-DD' dibaca sebagai siang WITA supaya tanggalnya tidak bergeser saat diformat.
+const dateFromKey = (key: string) => new Date(`${key}T12:00:00+08:00`);
+
+/** Ambil semua baris (PostgREST membatasi 1000 baris per permintaan). */
+async function selectAll(table: string, build?: (q: any) => any): Promise<any[]> {
+  if (!supabase) return [];
+  const PAGE = 1000;
+  const rows: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let q = supabase.from(table).select('*');
+    if (build) q = build(q);
+    const { data, error } = await q.order('created_at', { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE) return rows;
+  }
+}
+
+/**
+ * Muat catatan harian semua murid dari Supabase dan tempelkan ke objek murid
+ * (bentuk yang sama seperti yang dibuat ClassHabitsInputView). Kalau gagal,
+ * daftar murid dikembalikan apa adanya.
+ */
+export async function attachStudentRecords(murid: MuridRecord[]): Promise<MuridRecord[]> {
+  if (!isSupabaseConfigured() || !supabase || murid.length === 0) return murid;
+  try {
+    const { startYear } = getAcademicPeriod();
+    const today = witaDateKey();
+    const [presensi, nilai, portofolio, prestasi, harian] = await Promise.all([
+      selectAll('presensi', (q) => q.gte('tanggal', `${startYear}-07-01`)),
+      selectAll('nilai_akademik'),
+      selectAll('portofolio'),
+      selectAll('prestasi'),
+      selectAll('daily_habits', (q) => q.eq('date', today)),
+    ]);
+    const byMurid = (rows: any[]) => {
+      const map = new Map<string, any[]>();
+      rows.forEach((r) => map.set(r.murid_id, [...(map.get(r.murid_id) || []), r]));
+      return map;
+    };
+    const presensiBy = byMurid(presensi);
+    const nilaiBy = byMurid(nilai);
+    const portoBy = byMurid(portofolio);
+    const prestasiBy = byMurid(prestasi);
+    const harianBy = byMurid(harian);
+
+    return murid.map((m) => {
+      const extra: Record<string, unknown> = {};
+      const att = presensiBy.get(m.id);
+      if (att) {
+        extra.attendance = [...att]
+          .sort((a, b) => (a.tanggal < b.tanggal ? 1 : -1))
+          .map((r) => ({
+            id: r.id,
+            dateKey: r.tanggal,
+            date: formatWitaDateTime(new Date(r.created_at)),
+            status: r.status,
+            note: r.keterangan || '',
+          }));
+      }
+      const tasks = nilaiBy.get(m.id);
+      if (tasks) {
+        const academics: Record<string, any> = {};
+        tasks.forEach((r) => {
+          const subj = academics[r.mapel] || { subject: r.mapel, score: 0, tasks: [] };
+          subj.tasks.push({ taskId: r.id, taskName: r.nama_tugas, score: Number(r.nilai) });
+          subj.score = Math.round(subj.tasks.reduce((s: number, t: any) => s + t.score, 0) / subj.tasks.length);
+          academics[r.mapel] = subj;
+        });
+        extra.academics = academics;
+      }
+      const porto = portoBy.get(m.id);
+      if (porto) {
+        extra.portfolios = porto.map((r) => ({
+          id: r.id,
+          title: r.judul,
+          category: r.kategori,
+          date: formatWitaDate(dateFromKey(r.tanggal)),
+          dateKey: r.tanggal,
+          description: r.deskripsi,
+          feedback: r.umpan_balik_guru || '',
+        }));
+      }
+      const awards = prestasiBy.get(m.id);
+      if (awards) {
+        extra.achievements = awards.map((r) => ({
+          id: r.id,
+          title: r.judul,
+          category: r.tingkat,
+          date: formatWitaDate(dateFromKey(r.tanggal)),
+          dateKey: r.tanggal,
+          description: r.deskripsi,
+        }));
+      }
+      const day = harianBy.get(m.id)?.[0];
+      if (day) {
+        extra.homeHabitsValidated = !!day.divalidasi;
+        extra.homeHabitsValidatedAt = day.divalidasi_pada ? formatWitaDateTime(new Date(day.divalidasi_pada)) : undefined;
+        extra.homeNote = day.notes || '';
+      }
+      return Object.keys(extra).length ? ({ ...m, ...extra } as MuridRecord) : m;
+    });
+  } catch (err) {
+    console.warn('attachStudentRecords:', err instanceof Error ? err.message : err);
+    return murid;
+  }
+}
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Item di `next` yang baru atau berubah dibanding `prev` (dicocokkan per `key`). */
+function changedItems(prev: any[] = [], next: any[] = [], key: string): any[] {
+  const old = new Map(prev.map((x) => [x?.[key], x]));
+  return next.filter((x) => !old.has(x?.[key]) || !sameJson(old.get(x?.[key]), x));
+}
+
+const flattenTasks = (academics: Record<string, any> = {}) =>
+  Object.entries(academics).flatMap(([key, subj]) =>
+    (subj?.tasks || []).map((t: any) => ({ ...t, mapel: subj?.subject || key }))
+  );
+
+const toDateKey = (item: any) => (item?.dateKey && DATE_KEY_RE.test(item.dateKey) ? item.dateKey : witaDateKey());
+const uuidOrNew = (id: unknown) => (typeof id === 'string' && UUID_RE.test(id) ? id : newRecordId());
+
+/**
+ * Tulis ke Supabase semua perubahan data murid antara `prev` dan `next`:
+ * baris murid (7 KAIH saat ini, jam bangun/tidur, catatan), jurnal hari ini
+ * (`daily_habits`, termasuk validasi wali kelas), presensi, nilai, portofolio,
+ * dan prestasi. Hanya murid yang objeknya berubah yang diperiksa.
+ */
+export async function syncMuridChanges(prev: MuridRecord[], next: MuridRecord[]): Promise<SupabaseWriteResult> {
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
+  const before = new Map(prev.map((m) => [m.id, m]));
+  const changed = next.filter((m) => before.has(m.id) && before.get(m.id) !== m);
+  if (changed.length === 0) return { success: true };
+
+  const coreRows: MuridRecord[] = [];
+  const dailyRows: Record<string, unknown>[] = [];
+  const presensiRows: Record<string, unknown>[] = [];
+  const nilaiRows: Record<string, unknown>[] = [];
+  const portoRows: Record<string, unknown>[] = [];
+  const prestasiRows: Record<string, unknown>[] = [];
+  const today = witaDateKey();
+
+  changed.forEach((m) => {
+    const o = before.get(m.id)! as any;
+    const n = m as any;
+    const coreChanged = !sameJson(muridRecordToRow(o), muridRecordToRow(m));
+    if (coreChanged) coreRows.push(m);
+
+    const validationChanged = !!o.homeHabitsValidated !== !!n.homeHabitsValidated;
+    if (coreChanged || validationChanged || (o.homeNote || '') !== (n.homeNote || '')) {
+      const row: Record<string, unknown> = {
+        murid_id: m.id,
+        date: today,
+        wake_up_time: m.wakeUpTime,
+        bed_time: m.bedTime,
+        habits: m.habits || {},
+        prayers: m.prayers || {},
+        notes: n.homeNote || null,
+        updated_at: now().toISOString(),
+      };
+      if (validationChanged) {
+        row.divalidasi = !!n.homeHabitsValidated;
+        row.divalidasi_pada = n.homeHabitsValidated ? now().toISOString() : null;
+      }
+      dailyRows.push(row);
+    }
+
+    changedItems(o.attendance, n.attendance, 'id').forEach((a) =>
+      presensiRows.push({ murid_id: m.id, tanggal: toDateKey(a), status: a.status, keterangan: a.note || null })
+    );
+    changedItems(flattenTasks(o.academics), flattenTasks(n.academics), 'taskId').forEach((t) =>
+      nilaiRows.push({ id: uuidOrNew(t.taskId), murid_id: m.id, mapel: t.mapel, nama_tugas: t.taskName, nilai: Number(t.score) })
+    );
+    changedItems(o.portfolios, n.portfolios, 'id').forEach((p) =>
+      portoRows.push({
+        id: uuidOrNew(p.id),
+        murid_id: m.id,
+        judul: p.title,
+        kategori: p.category || 'Lainnya',
+        tanggal: toDateKey(p),
+        deskripsi: p.description || '-',
+        umpan_balik_guru: p.feedback || null,
+      })
+    );
+    changedItems(o.achievements, n.achievements, 'id').forEach((a) =>
+      prestasiRows.push({
+        id: uuidOrNew(a.id),
+        murid_id: m.id,
+        judul: a.title,
+        tingkat: PRESTASI_TINGKAT.includes(a.category) ? a.category : 'Sekolah',
+        tanggal: toDateKey(a),
+        deskripsi: a.description || '-',
+      })
+    );
+  });
+
+  const errors: string[] = [];
+  const run = async (label: string, write: () => PromiseLike<{ error: { message: string } | null }>) => {
+    try {
+      const { error } = await write();
+      if (error) errors.push(`${label}: ${error.message}`);
+    } catch (err) {
+      errors.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  // Baris murid dulu — tabel lain punya FK ke murid.id.
+  if (coreRows.length) {
+    const res = await upsertMuridList(coreRows);
+    if (!res.success) errors.push(`murid: ${res.message}`);
+  }
+  const db = supabase;
+  await Promise.all([
+    dailyRows.length && run('jurnal 7 KAIH', () => db.from('daily_habits').upsert(dailyRows, { onConflict: 'murid_id,date' })),
+    presensiRows.length && run('presensi', () => db.from('presensi').upsert(presensiRows, { onConflict: 'murid_id,tanggal' })),
+    nilaiRows.length && run('nilai', () => db.from('nilai_akademik').upsert(nilaiRows, { onConflict: 'id' })),
+    portoRows.length && run('portofolio', () => db.from('portofolio').upsert(portoRows, { onConflict: 'id' })),
+    prestasiRows.length && run('prestasi', () => db.from('prestasi').upsert(prestasiRows, { onConflict: 'id' })),
+  ]);
+
+  return errors.length ? { success: false, message: errors.join('; ') } : { success: true };
+}
+
+// ==============================================================================
+// SESI SUPERVISI — satu baris per guru per semester (teacher_id + semester unik)
+// ==============================================================================
+
+/** Nilai kolom `supervision_sessions.semester`, mis. 'Ganjil 2026/2027'. */
+export const currentSupervisionSemester = () => {
+  const { semester, tahunAjaran } = getAcademicPeriod();
+  return `${semester} ${tahunAjaran}`;
+};
+
+const KESIMPULAN = ['Sangat Baik', 'Baik', 'Baik dengan Penguatan', 'Memerlukan Pendampingan Intensif'];
+
+function sessionToRow(teacherId: string, s: SupervisionSession) {
+  return {
+    teacher_id: teacherId,
+    semester: currentSupervisionSemester(),
+    status: s.status,
+    mapel: s.mapel || null,
+    kelas: s.kelas || null,
+    topik: s.topik || null,
+    tujuan: s.tujuan || null,
+    tanggal: s.tanggal && DATE_KEY_RE.test(s.tanggal) ? s.tanggal : null,
+    jam: s.jam || null,
+    lokasi: s.lokasi || null,
+    supervisor: s.supervisor || null,
+    catatan_awal: s.catatanAwal || null,
+    rpp_file_name: s.rppFileName || null,
+    rpp_file_size: s.rppFileSize || null,
+    rpp_upload_date: s.rppUploadDate || null,
+    rpp_url: s.rppUrl || null,
+    rpp_status: s.rppStatus || 'BELUM_DIPERIKSA',
+    scores17: s.scores17 || {},
+    comments17: s.comments17 || {},
+    aspect_status14: s.aspectStatus14 || {},
+    aspect_feedback14: s.aspectFeedback14 || {},
+    kelebihan15: s.kelebihan15 || null,
+    kekurangan16: s.kekurangan16 || null,
+    rekomendasi17: s.rekomendasi17 || null,
+    obs_timer_seconds: Math.round(s.obsTimerSeconds || 0),
+    obs_notes: s.obsNotes || null,
+    reflection1: s.reflection1 || null,
+    reflection2: s.reflection2 || null,
+    reflection3: s.reflection3 || null,
+    reflection4: s.reflection4 || null,
+    reflection5: s.reflection5 || null,
+    reflection6: s.reflection6 || null,
+    penguatan_ks: s.penguatanKS || null,
+    catatan_khusus_ks: s.catatanKhususKS || null,
+    rekomendasi_ks: s.rekomendasiKS || null,
+    tindak_lanjut_ks: s.tindakLanjutKS || 'TIDAK_ADA_TINDAK_LANJUT',
+    scores22: s.scores22 || {},
+    comments22: s.comments22 || {},
+    apresiasi_obs: s.apresiasiObs || null,
+    temuan_obs: s.temuanObs || null,
+    kesimpulan_obs: s.kesimpulanObs && KESIMPULAN.includes(s.kesimpulanObs) ? s.kesimpulanObs : null,
+    komitmen_guru: s.komitmenGuruNew || null,
+  };
+}
+
+function rowToSession(r: any): SupervisionSession {
+  return {
+    status: r.status,
+    mapel: r.mapel || '',
+    kelas: r.kelas || '',
+    topik: r.topik || '',
+    tujuan: r.tujuan || '',
+    tanggal: r.tanggal || '',
+    jam: r.jam || '',
+    lokasi: r.lokasi || '',
+    supervisor: r.supervisor || '',
+    catatanAwal: r.catatan_awal || '',
+    rppFileName: r.rpp_file_name || '',
+    rppFileSize: r.rpp_file_size || '',
+    rppUploadDate: r.rpp_upload_date || '',
+    ...(r.rpp_url ? { rppUrl: r.rpp_url } : {}),
+    rppStatus: r.rpp_status || 'BELUM_DIPERIKSA',
+    scores17: r.scores17 || {},
+    comments17: r.comments17 || {},
+    aspectStatus14: r.aspect_status14 || {},
+    aspectFeedback14: r.aspect_feedback14 || {},
+    kelebihan15: r.kelebihan15 || '',
+    kekurangan16: r.kekurangan16 || '',
+    rekomendasi17: r.rekomendasi17 || '',
+    obsTimerSeconds: r.obs_timer_seconds || 0,
+    obsNotes: r.obs_notes || '',
+    reflection1: r.reflection1 || '',
+    reflection2: r.reflection2 || '',
+    reflection3: r.reflection3 || '',
+    reflection4: r.reflection4 || '',
+    reflection5: r.reflection5 || '',
+    reflection6: r.reflection6 || '',
+    penguatanKS: r.penguatan_ks || '',
+    catatanKhususKS: r.catatan_khusus_ks || '',
+    rekomendasiKS: r.rekomendasi_ks || '',
+    tindakLanjutKS: r.tindak_lanjut_ks || 'TIDAK_ADA_TINDAK_LANJUT',
+    scores22: r.scores22 || {},
+    comments22: r.comments22 || {},
+    apresiasiObs: r.apresiasi_obs || '',
+    temuanObs: r.temuan_obs || '',
+    ...(r.kesimpulan_obs ? { kesimpulanObs: r.kesimpulan_obs } : {}),
+    komitmenGuruNew: r.komitmen_guru || '',
+  } as SupervisionSession;
+}
+
+/** Sesi supervisi semester berjalan, dikelompokkan per teacher_id. */
+export async function getSupervisionSessions(): Promise<Record<string, SupervisionSession> | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+  try {
+    const rows = await selectAll('supervision_sessions', (q) => q.eq('semester', currentSupervisionSemester()));
+    return Object.fromEntries(rows.map((r) => [r.teacher_id, rowToSession(r)]));
+  } catch (err) {
+    console.warn('getSupervisionSessions:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+export async function upsertSupervisionSession(teacherId: string, session: SupervisionSession): Promise<SupabaseWriteResult> {
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
+  try {
+    const { error } = await supabase
+      .from('supervision_sessions')
+      .upsert(sessionToRow(teacherId, session), { onConflict: 'teacher_id,semester' });
+    return error ? { success: false, message: error.message } : { success: true };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// ==============================================================================
+// RIWAYAT JURNAL 7 KAIH PER HARI (Kalender orang tua)
+// ==============================================================================
+
+export interface DailyHabitEntry {
+  habits: Record<number, boolean>;
+  prayers: Partial<PrayerTimesChecklist>;
+  wakeUpTime: string;
+  bedTime: string;
+  notes: string;
+}
+
+/** Jurnal harian satu murid antara dua tanggal 'YYYY-MM-DD' (inklusif), per tanggal. */
+export async function getDailyHabitLogs(
+  muridId: string,
+  fromKey: string,
+  toKey: string
+): Promise<Record<string, DailyHabitEntry>> {
+  if (!isSupabaseConfigured() || !supabase) return {};
+  try {
+    const rows = await selectAll('daily_habits', (q) =>
+      q.eq('murid_id', muridId).gte('date', fromKey).lte('date', toKey)
+    );
+    return Object.fromEntries(
+      rows.map((r) => [
+        r.date,
+        {
+          habits: r.habits || {},
+          prayers: r.prayers || {},
+          wakeUpTime: r.wake_up_time || '05:00',
+          bedTime: r.bed_time || '21:00',
+          notes: r.notes || '',
+        },
+      ])
+    );
+  } catch (err) {
+    console.warn('getDailyHabitLogs:', err instanceof Error ? err.message : err);
+    return {};
+  }
+}
+
+/** Simpan jurnal satu hari (dipakai untuk hari lampau; hari ini lewat syncMuridChanges). */
+export async function saveDailyHabitLog(muridId: string, dateKey: string, entry: DailyHabitEntry): Promise<SupabaseWriteResult> {
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
+  try {
+    const { error } = await supabase.from('daily_habits').upsert(
+      {
+        murid_id: muridId,
+        date: dateKey,
+        habits: entry.habits,
+        prayers: entry.prayers,
+        wake_up_time: entry.wakeUpTime,
+        bed_time: entry.bedTime,
+        notes: entry.notes || null,
+        // Isian orang tua yang berubah perlu divalidasi ulang wali kelas.
+        divalidasi: false,
+        divalidasi_pada: null,
+        updated_at: now().toISOString(),
+      },
+      { onConflict: 'murid_id,date' }
+    );
+    return error ? { success: false, message: error.message } : { success: true };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
+  }
+}

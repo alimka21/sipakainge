@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
-import { ScreenId, UserRole, SupervisionSession, SupervisionStatus } from './types';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScreenId, UserRole, SupervisionSession, SupervisionStatus, MuridRecord } from './types';
 import { AppHeader } from './components/AppHeader';
 import { AppSidebar } from './components/AppSidebar';
 import { BeritaAcaraModal, QuickRecordModal } from './components/Modals';
@@ -22,6 +22,10 @@ import {
   upsertTeacher,
   upsertTeachers,
   upsertMurid,
+  attachStudentRecords,
+  syncMuridChanges,
+  getSupervisionSessions,
+  upsertSupervisionSession,
   isSupabaseConfigured,
   SupabaseWriteResult,
 } from './lib/supabase';
@@ -36,7 +40,7 @@ import {
   teacherLoginId,
   DEFAULT_NO_NIP_PASSWORD,
 } from './lib/accounts';
-import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS, PRINCIPAL_NIP, PRINCIPAL_NAME } from './data/mockData';
+import { INITIAL_TEACHERS, INITIAL_MURID, INITIAL_ROMBEL, APP_ASSETS, PRINCIPAL_NIP, PRINCIPAL_NAME, HABIT_LIST } from './data/mockData';
 
 // Views
 import { LandingPageView } from './views/LandingPageView';
@@ -107,12 +111,16 @@ export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     (async () => {
-      const [remoteRombel, remoteTeachers, remoteMurid, settings] = await Promise.all([
+      const [remoteRombel, remoteTeachers, baseMurid, settings, remoteSessions] = await Promise.all([
         getRombelData(),
         getTeachersData(),
         getMuridData(),
         getSchoolSettings(),
+        getSupervisionSessions(),
       ]);
+      // Presensi, nilai, portofolio, prestasi, dan jurnal 7 KAIH hari ini.
+      const remoteMurid = await attachStudentRecords(baseMurid);
+      if (remoteSessions) setSessionStates((prev) => ({ ...remoteSessions, ...prev }));
       setRombelList(remoteRombel);
       // Guru without NIP log in with a username. Older rows (saved before
       // usernames existed) get one now and it's written back, so it stays
@@ -126,6 +134,73 @@ export default function App() {
       if (settings?.principalName) setPrincipalName(settings.principalName);
       setPrincipalPasswordHash(settings?.principalPasswordHash ?? null);
     })();
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Penyimpanan permanen data yang diisi lewat layar input (7 KAIH, presensi,
+  // nilai, portofolio, prestasi, input cepat orang tua, sesi supervisi).
+  // Layar-layar itu cukup memanggil setter biasa; pembungkus di bawah ini
+  // memperbarui state lalu menulis bagian yang berubah ke Supabase. Sebelum
+  // ini, semua data tersebut hanya ada di memori browser dan hilang saat
+  // halaman dimuat ulang.
+  // ---------------------------------------------------------------------------
+  const muridListRef = useRef(muridList);
+  muridListRef.current = muridList;
+  const reportSyncFailure = (what: string, message?: string) =>
+    showToast(`⚠ ${what} belum tersimpan ke database: ${message || 'koneksi gagal'}. Coba simpan ulang.`);
+
+  const updateMuridListAndSync: React.Dispatch<React.SetStateAction<MuridRecord[]>> = (action) => {
+    const prev = muridListRef.current;
+    const next = typeof action === 'function' ? action(prev) : action;
+    if (next === prev) return;
+    muridListRef.current = next;
+    setMuridList(next);
+    syncMuridChanges(prev, next).then((res) => {
+      if (!res.success) reportSyncFailure('Data murid', res.message);
+    });
+  };
+
+  const sessionStatesRef = useRef(sessionStates);
+  sessionStatesRef.current = sessionStates;
+  // Form supervisi menulis per ketikan — tunda penulisan ke DB sampai pengguna
+  // berhenti mengetik sebentar, satu timer per guru.
+  const sessionSaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const scheduleSessionSave = (teacherId: string) => {
+    clearTimeout(sessionSaveTimers.current[teacherId]);
+    sessionSaveTimers.current[teacherId] = setTimeout(async () => {
+      delete sessionSaveTimers.current[teacherId];
+      const session = sessionStatesRef.current[teacherId];
+      if (!session) return;
+      const res = await upsertSupervisionSession(teacherId, session);
+      if (!res.success) reportSyncFailure('Sesi supervisi', res.message);
+    }, 800);
+  };
+
+  const updateSessionStatesAndSync: React.Dispatch<React.SetStateAction<Record<string, SupervisionSession>>> = (
+    action
+  ) => {
+    const prev = sessionStatesRef.current;
+    const next = typeof action === 'function' ? action(prev) : action;
+    if (next === prev) return;
+    sessionStatesRef.current = next;
+    setSessionStates(next);
+    Object.keys(next).forEach((teacherId) => {
+      if (next[teacherId] !== prev[teacherId]) scheduleSessionSave(teacherId);
+    });
+  };
+
+  // Simpan sesi yang masih menunggu kalau tab ditutup / dimuat ulang.
+  useEffect(() => {
+    const flush = () => {
+      Object.keys(sessionSaveTimers.current).forEach((teacherId) => {
+        clearTimeout(sessionSaveTimers.current[teacherId]);
+        const session = sessionStatesRef.current[teacherId];
+        if (session) upsertSupervisionSession(teacherId, session);
+      });
+      sessionSaveTimers.current = {};
+    };
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
   }, []);
 
   /**
@@ -449,7 +524,7 @@ export default function App() {
                     handleNavigate('observation_form');
                   }}
                   sessionStates={sessionStates}
-                  onUpdateSessionStates={setSessionStates}
+                  onUpdateSessionStates={updateSessionStatesAndSync}
                   teacherList={teachersList}
                   muridList={muridList}
                 />
@@ -489,7 +564,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   userRole={userRole}
                   muridList={muridList}
-                  onUpdateMuridList={setMuridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   rombelList={rombelList}
                   guruId={guruId}
                   lockedTab="habits"
@@ -502,7 +577,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   userRole={userRole}
                   muridList={muridList}
-                  onUpdateMuridList={setMuridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   rombelList={rombelList}
                   guruId={guruId}
                   lockedTab="academics"
@@ -515,7 +590,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   userRole={userRole}
                   muridList={muridList}
-                  onUpdateMuridList={setMuridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   rombelList={rombelList}
                   guruId={guruId}
                   lockedTab="portfolios"
@@ -528,7 +603,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   userRole={userRole}
                   muridList={muridList}
-                  onUpdateMuridList={setMuridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   rombelList={rombelList}
                   guruId={guruId}
                   lockedTab="awards"
@@ -541,7 +616,7 @@ export default function App() {
                   onNavigate={handleNavigate}
                   userRole={userRole}
                   muridList={muridList}
-                  onUpdateMuridList={setMuridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   rombelList={rombelList}
                   guruId={guruId}
                   lockedTab="attendance"
@@ -554,10 +629,10 @@ export default function App() {
                   <TeacherSelfSupervisionView
                     onNavigate={handleNavigate}
                     sessionStates={sessionStates}
-                    onUpdateSessionStates={setSessionStates}
+                    onUpdateSessionStates={updateSessionStatesAndSync}
                     teacherList={teachersList}
                     muridList={muridList}
-                    onUpdateMuridList={setMuridList}
+                    onUpdateMuridList={updateMuridListAndSync}
                     guruId={guruId}
                     principalName={principalName}
                   />
@@ -589,7 +664,7 @@ export default function App() {
                   }}
                   userRole={userRole}
                   sessionStates={sessionStates}
-                  onUpdateSessionStates={setSessionStates}
+                  onUpdateSessionStates={updateSessionStatesAndSync}
                   selectedTeacherId={selectedTeacherId}
                   onSelectTeacherId={setSelectedTeacherId}
                   teacherList={teachersList}
@@ -631,6 +706,7 @@ export default function App() {
                   onOpenQuickRecord={() => setIsQuickRecordOpen(true)}
                   userRole={userRole}
                   muridList={muridList}
+                  onUpdateMuridList={updateMuridListAndSync}
                   parentMuridId={parentMuridId}
                   rombelList={rombelList}
                   guruId={guruId}
@@ -721,8 +797,24 @@ export default function App() {
       <QuickRecordModal
         isOpen={isQuickRecordOpen}
         onClose={() => setIsQuickRecordOpen(false)}
-        onSave={(count) => {
-          showToast(`Berhasil menyimpan ${count} pembiasaan hari ini ke Dapodik!`);
+        onSave={(entry) => {
+          updateMuridListAndSync((prev) =>
+            prev.map((m) =>
+              m.id === entry.muridId
+                ? ({
+                    ...m,
+                    habits: Object.fromEntries(HABIT_LIST.map((h) => [h.id, entry.habitIds.includes(h.id)])),
+                    prayers: { ...m.prayers, ...entry.prayers },
+                    wakeUpTime: entry.wakeTime,
+                    bedTime: entry.bedTime,
+                    homeNote: entry.note,
+                    // Isian baru dari rumah perlu divalidasi ulang oleh wali kelas.
+                    homeHabitsValidated: false,
+                  } as MuridRecord)
+                : m
+            )
+          );
+          showToast(`✓ ${entry.habitIds.length} dari 7 pembiasaan hari ini disimpan.`);
         }}
         muridOptions={getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId)}
       />

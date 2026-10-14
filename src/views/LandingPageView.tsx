@@ -41,7 +41,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-100 max-w-fit">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#00685f] animate-pulse"></span>
                   <span className="text-[11px] sm:text-xs text-[#00685f] font-bold uppercase tracking-wider">
-                    UPT SPF SDN PERCONTOHAN PAM MAKASSAR • AKREDITASI A UNGGUL
+                    SD NEGERI PERCONTOHAN PAM • AKREDITASI A UNGGUL
                   </span>
                 </div>
 
@@ -165,7 +165,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                         Kepemimpinan Transformatif
                       </span>
                       <p className="text-lg font-bold leading-tight">{principalName}</p>
-                      <p className="text-xs opacity-90">Kepala UPT SPF SDN Percontohan PAM Makassar</p>
+                      <p className="text-xs opacity-90">Kepala SD Negeri Percontohan PAM</p>
                     </div>
                   </div>
 
@@ -364,7 +364,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   7 Kebiasaan Anak Indonesia Hebat (7 KAIH)
                 </h2>
                 <p className="text-sm text-slate-600 mt-2">
-                  Bukan sekadar hafalan, melainkan pola hidup yang mengakar dalam rutinitas keseharian murid UPT SPF SDN
+                  Bukan sekadar hafalan, melainkan pola hidup yang mengakar dalam rutinitas keseharian murid SD Negeri
                   Percontohan PAM mulai dari fajar hingga beristirahat malam.
                 </p>
               </div>
@@ -634,7 +634,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900">Siti Rahmawati, S.Pd.</p>
-                    <p className="text-[11px] text-slate-500">Wali Kelas IV SDN Percontohan PAM</p>
+                    <p className="text-[11px] text-slate-500">Wali Kelas IV SD Negeri Percontohan PAM</p>
                   </div>
                 </div>
               </div>
@@ -739,7 +739,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <div className="flex flex-col">
                   <span className="text-lg font-black tracking-tight text-[#00685f]">SIPAKAINGE</span>
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                    SDN Percontohan PAM Makassar
+                    SD Negeri Percontohan PAM
                   </span>
                 </div>
               </div>
@@ -761,7 +761,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <div className="flex items-start gap-1.5">
                   <span className="material-symbols-outlined text-[#00685f] text-base mt-0.5">school</span>
                   <div>
-                    <p className="font-semibold text-slate-900">UPT SPF SDN Percontohan PAM</p>
+                    <p className="font-semibold text-slate-900">SD Negeri Percontohan PAM</p>
                     <p>Jl. Dr. Sam Ratulangi No. 1, Kel. Mangkura, Kec. Ujung Pandang</p>
                     <p>Kota Makassar, Sulawesi Selatan 90113</p>
                   </div>
@@ -791,7 +791,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           </div>
 
           <div className="pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <p>© {witaParts().year} UPT SPF SDN Percontohan PAM Kota Makassar. Hak Cipta Dilindungi Undang-Undang.</p>
+            <p>© {witaParts().year} SD Negeri Percontohan PAM. Hak Cipta Dilindungi Undang-Undang.</p>
             <p className="uppercase tracking-wider text-slate-400 text-[10px]">
               Dinas Pendidikan Kota Makassar • Gerakan Sipakatau, Sipakalebbi, Sipakainge
             </p>

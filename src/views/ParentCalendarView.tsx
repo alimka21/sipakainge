@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS } from '../data/mockData';
 import { DayHabitLog } from '../types';
 import { witaMonthDays, BULAN } from '../lib/time';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
+import { DailyHabitEntry, getDailyHabitLogs, saveDailyHabitLog } from '../lib/supabase';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -14,6 +15,7 @@ interface ParentCalendarViewProps {
   guruId?: string;
   teacherList?: TeacherRecord[];
   muridList?: MuridRecord[];
+  onUpdateMuridList?: React.Dispatch<React.SetStateAction<MuridRecord[]>>;
 }
 
 export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
@@ -25,6 +27,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   muridList = INITIAL_MURID,
   guruId,
   teacherList = INITIAL_TEACHERS,
+  onUpdateMuridList,
 }) => {
   const isKS = userRole === 'kepala_sekolah';
   const visibleMurid = getVisibleMurid(userRole, muridList, rombelList, parentMuridId, guruId);
@@ -36,47 +39,16 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
   const activeMurid =
     visibleMurid.find((m) => m.id === selectedMuridId) ?? (isKS ? undefined : classMuridList[0]);
 
-  // Current WITA month from the server-synced clock. Days before today start
-  // as "kosong" — there is no stored daily_habits history to show yet.
+  // Current WITA month from the server-synced clock. Today's entry is the
+  // student's live record (synced via onUpdateMuridList); earlier days come
+  // from the stored daily_habits journal.
   const [monthInfo] = useState(() => witaMonthDays());
   const bulanNama = BULAN[monthInfo.month - 1];
   const [selectedDay, setSelectedDay] = useState<number>(monthInfo.today);
   const [activeFilter, setActiveFilter] = useState<'all' | number>('all');
-  const [daysData, setDaysData] = useState<DayHabitLog[]>(() =>
-    Array.from({ length: monthInfo.today }, (_, i) => {
-      const day = i + 1;
-      return {
-        day,
-        dateStr: monthInfo.labelFor(day),
-        status: day === monthInfo.today ? 'hari_ini' : 'kosong',
-        habitsDone: 0,
-        totalHabits: 7,
-      };
-    })
-  );
-  const [wakeTime, setWakeTime] = useState('05:00');
-  const [bedTime, setBedTime] = useState('21:00');
-  const [prayersCheck, setPrayersCheck] = useState<Record<string, boolean>>({
-    subuh: true,
-    dzuhur: true,
-    ashar: true,
-    maghrib: true,
-    isya: false,
-    tadarus: true,
-    dhuha: true,
-  });
-  const [dayChecklist, setDayChecklist] = useState<Record<number, boolean>>({
-    1: true,
-    2: true,
-    3: false,
-    4: true,
-    5: true,
-    6: true,
-    7: false,
-  });
-  const [parentNote, setParentNote] = useState(
-    'Ahmad hari ini sangat bersemangat menjelaskan fotosintesis tumbuhan saat sarapan pagi bersama keluarga.'
-  );
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const dayKey = (d: number) => `${monthInfo.year}-${pad(monthInfo.month)}-${pad(d)}`;
+  const [history, setHistory] = useState<Record<string, DailyHabitEntry>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -84,28 +56,90 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleToggleHabit = (id: number) => {
-    setDayChecklist((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      const completedCount = Object.values(next).filter(Boolean).length;
-      
-      // Update the day record
-      setDaysData((prevDays) =>
-        prevDays.map((d) => {
-          if (d.day === selectedDay) {
-            return {
-              ...d,
-              habitsDone: completedCount,
-              status: completedCount === 7 ? 'lengkap' : completedCount >= 4 ? 'sebagian' : d.day === monthInfo.today ? 'hari_ini' : 'kosong',
-            };
-          }
-          return d;
-        })
+  useEffect(() => {
+    if (!activeMurid) return;
+    let cancelled = false;
+    setHistory({});
+    getDailyHabitLogs(activeMurid.id, dayKey(1), dayKey(monthInfo.daysInMonth)).then((logs) => {
+      if (!cancelled) setHistory(logs);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMurid?.id]);
+
+  const blankEntry = (): DailyHabitEntry => ({ habits: {}, prayers: {}, wakeUpTime: '05:00', bedTime: '21:00', notes: '' });
+  const entryFor = (d: number): DailyHabitEntry | undefined =>
+    d === monthInfo.today && activeMurid
+      ? {
+          habits: activeMurid.habits || {},
+          prayers: activeMurid.prayers || {},
+          wakeUpTime: activeMurid.wakeUpTime || '05:00',
+          bedTime: activeMurid.bedTime || '21:00',
+          notes: (activeMurid as any).homeNote || '',
+        }
+      : history[dayKey(d)];
+
+  const daysData: DayHabitLog[] = Array.from({ length: monthInfo.today }, (_, i) => {
+    const day = i + 1;
+    const done = Object.values(entryFor(day)?.habits || {}).filter(Boolean).length;
+    return {
+      day,
+      dateStr: monthInfo.labelFor(day),
+      status: done === 7 ? 'lengkap' : done >= 4 ? 'sebagian' : day === monthInfo.today ? 'hari_ini' : 'kosong',
+      habitsDone: done,
+      totalHabits: 7,
+    };
+  });
+
+  const selectedEntry = entryFor(selectedDay) || blankEntry();
+  const dayChecklist = selectedEntry.habits;
+  const prayersCheck = selectedEntry.prayers as Record<string, boolean>;
+  const wakeTime = selectedEntry.wakeUpTime;
+  const bedTime = selectedEntry.bedTime;
+  const [parentNote, setParentNote] = useState('');
+  useEffect(() => {
+    setParentNote(selectedEntry.notes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDay, activeMurid?.id, history]);
+
+  /** Simpan perubahan untuk tanggal yang sedang dipilih. */
+  const saveDay = (patch: Partial<DailyHabitEntry>) => {
+    if (!activeMurid) return;
+    if (selectedDay === monthInfo.today) {
+      onUpdateMuridList?.((prev) =>
+        prev.map((m) =>
+          m.id === activeMurid.id
+            ? ({
+                ...m,
+                ...(patch.habits ? { habits: patch.habits } : {}),
+                ...(patch.prayers ? { prayers: { ...m.prayers, ...patch.prayers } } : {}),
+                ...(patch.wakeUpTime ? { wakeUpTime: patch.wakeUpTime } : {}),
+                ...(patch.bedTime ? { bedTime: patch.bedTime } : {}),
+                ...(patch.notes !== undefined ? { homeNote: patch.notes } : {}),
+                homeHabitsValidated: false,
+              } as MuridRecord)
+            : m
+        )
       );
-      showToast(`Kebiasaan #${id} diperbarui untuk tanggal ${selectedDay} ${bulanNama}!`);
-      return next;
+      return;
+    }
+    const key = dayKey(selectedDay);
+    const base = history[key] || blankEntry();
+    const next = { ...base, ...patch, prayers: { ...base.prayers, ...(patch.prayers || {}) } };
+    setHistory((h) => ({ ...h, [key]: next }));
+    saveDailyHabitLog(activeMurid.id, key, next).then((res) => {
+      if (!res.success) showToast(`⚠ Gagal menyimpan ke database: ${res.message}`);
     });
   };
+
+  const handleToggleHabit = (id: number) => {
+    saveDay({ habits: { ...dayChecklist, [id]: !dayChecklist[id] } });
+    showToast(`Kebiasaan #${id} diperbarui untuk tanggal ${selectedDay} ${bulanNama}!`);
+  };
+
+  const togglePrayer = (key: string) => saveDay({ prayers: { [key]: !prayersCheck[key] } });
 
   const selectedDayLog = daysData.find((d) => d.day === selectedDay);
 
@@ -260,7 +294,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                       <span>•</span>
                       <span>Wali Kelas: {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}</span>
                       <span>•</span>
-                      <span>UPT SPF SDN Percontohan PAM Makassar</span>
+                      <span>SD Negeri Percontohan PAM</span>
                     </p>
                   </div>
                 </div>
@@ -648,7 +682,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                               type="time"
                               value={wakeTime}
                               onChange={(e) => {
-                                setWakeTime(e.target.value);
+                                saveDay({ wakeUpTime: e.target.value });
                                 showToast(`Jam bangun disetel ke ${e.target.value} WITA`);
                               }}
                               className="rounded border border-teal-300 bg-white px-1.5 py-0.5 font-bold text-teal-800 text-[11px]"
@@ -676,7 +710,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setPrayersCheck((p) => ({ ...p, [prKey]: !p[prKey] }));
+                                    togglePrayer(prKey);
                                   }}
                                   className={`rounded py-1 text-center text-[10px] font-bold capitalize transition ${
                                     done
@@ -694,7 +728,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setPrayersCheck((p) => ({ ...p, tadarus: !p.tadarus }));
+                                togglePrayer('tadarus');
                               }}
                               className={`rounded px-2 py-0.5 text-[10px] font-semibold transition ${
                                 prayersCheck.tadarus
@@ -708,7 +742,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setPrayersCheck((p) => ({ ...p, dhuha: !p.dhuha }));
+                                togglePrayer('dhuha');
                               }}
                               className={`rounded px-2 py-0.5 text-[10px] font-semibold transition ${
                                 prayersCheck.dhuha
@@ -731,7 +765,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                               type="time"
                               value={bedTime}
                               onChange={(e) => {
-                                setBedTime(e.target.value);
+                                saveDay({ bedTime: e.target.value });
                                 showToast(`Jam tidur disetel ke ${e.target.value} WITA`);
                               }}
                               className="rounded border border-teal-300 bg-white px-1.5 py-0.5 font-bold text-teal-800 text-[11px]"
@@ -758,9 +792,10 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                   placeholder="Tuliskan catatan apresiasi atau pembiasaan anak hari ini..."
                 ></textarea>
                 <div className="mt-2 flex justify-between items-center">
-                  <span className="text-[10px] text-slate-400">Tersimpan otomatis</span>
+                  <span className="text-[10px] text-slate-400">Centang & jam tersimpan otomatis</span>
                   <button
                     onClick={() => {
+                      saveDay({ notes: parentNote.trim() });
                       showToast('Catatan harian orang tua berhasil disimpan!');
                     }}
                     className="rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white hover:bg-teal-800 transition"

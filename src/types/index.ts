@@ -118,6 +118,8 @@ export interface SupervisionSession {
   rppFileName: string;
   rppFileSize: string;
   rppUploadDate: string;
+  /** Public URL of the uploaded RPP in Supabase Storage (rpp_bucket), when available. */
+  rppUrl?: string;
   rppStatus: 'BELUM_DIPERIKSA' | 'DIPERIKSA' | 'PERLU_PERBAIKAN';
   scores17: Record<number, number>;
   comments17: Record<number, string>;

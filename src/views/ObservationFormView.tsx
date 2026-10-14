@@ -553,6 +553,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                           rppFileName: res.name,
                           rppFileSize: res.size,
                           rppUploadDate: res.date,
+                          rppUrl: res.url || '',
                           rppStatus: 'BELUM_DIPERIKSA'
                         });
                         triggerToast(res.message || '✓ Berkas RPP/Modul Ajar PDF berhasil diunggah!');

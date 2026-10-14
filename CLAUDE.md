@@ -347,13 +347,64 @@ of this file / the session that added this) found:
 - **Known gap, not yet handled:** deleting a teacher sets
   `rombel.wali_kelas_id` to NULL server-side (`ON DELETE SET NULL`), but the
   local `rombelList` React state is not refreshed to match — it'll drift
-  until the next full reload/hydration. Also still local-state-only, not
-  synced anywhere: `daily_habits`, `presensi`, `nilai_akademik`, `portofolio`,
-  `prestasi`, `supervision_sessions` — everything entered through
-  `ClassHabitsInputView.tsx` (7 KAIH, Presensi, Nilai, Portofolio, Prestasi)
-  and `ObservationFormView.tsx`/`TeacherSelfSupervisionView.tsx` (supervision
-  sessions) is still browser-session-only. Same pattern (mapper + upsert +
-  wire into the handler) applies whenever that gets picked up.
+  until the next full reload/hydration. (The daily-data tables are synced
+  since 2026-10-15 — see next section.)
+
+## Daily data & supervision sessions sync (since 2026-10-15)
+User report: "user sudah isi data tapi tidak tersimpan". Cause: everything
+entered on the input screens lived only in React state. Live DB check showed
+`presensi`, `nilai_akademik`, `portofolio`, `prestasi`, `daily_habits`,
+`supervision_sessions` all empty although teachers/murid were full.
+- **App.tsx wrappers**: `updateMuridListAndSync` (passed as
+  `onUpdateMuridList` to the 5 `ClassHabitsInputView` screens,
+  `TeacherSelfSupervisionView`, `ParentCalendarView`, and used by the
+  QuickRecordModal save) and `updateSessionStatesAndSync` (passed as
+  `onUpdateSessionStates` everywhere). They apply the update via a ref
+  (so back-to-back calls chain), then write only what changed. Failures show
+  a "⚠ … belum tersimpan ke database" toast. `UserManagementView` /
+  `ClassManagementView` still get the raw `setMuridList` — they do their own
+  upserts (`notifySync`).
+- `syncMuridChanges(prev, next)` (`supabase.ts`) diffs per changed murid:
+  core row (habits/prayers/jam/notes) → `murid`; today's journal (+
+  `divalidasi` when `homeHabitsValidated` flips, parent note `homeNote`) →
+  `daily_habits` (`murid_id,date` = `witaDateKey()`); new/changed
+  `attendance` → `presensi` (one per murid per day — ClassHabitsInputView
+  now replaces the same-day entry); `academics[*].tasks` (by `taskId`) →
+  `nilai_akademik`; `portfolios` → `portofolio`; `achievements` →
+  `prestasi` (tingkat outside the CHECK list → 'Sekolah').
+  **New ad hoc items must use `newRecordId()` (UUID)** — DB ids are UUID;
+  non-UUID legacy ids get a fresh UUID on write. Items carry `dateKey`
+  (YYYY-MM-DD) next to the display `date`.
+- Hydration: `attachStudentRecords(murid)` loads those tables (presensi only
+  from the current TA start; `selectAll` pages past PostgREST's 1000-row cap)
+  and rebuilds the same ad hoc shapes; `getSupervisionSessions()` loads the
+  current semester (`currentSupervisionSemester()` = `'Ganjil 2026/2027'`
+  format, matching the column default — NOT `getAcademicPeriod().label`).
+- Sessions save debounced 800 ms per teacher (forms write per keystroke),
+  flushed on `pagehide`. `tanggal` is only sent if it's YYYY-MM-DD (DATE
+  column). `SupervisionSession.rppUrl` added and stored.
+- Fixed along the way: ClassHabitsInputView kept a stale local copy of
+  `muridList` (dhuha/dzuhur toggles never left the page) — now reads props;
+  "Simpan Catatan" wali kelas did nothing — now saves `murid.notes`;
+  QuickRecordModal discarded input (toast said "ke Dapodik") and started
+  from fake pre-ticked defaults — now loads the student's data and saves;
+  ParentCalendarView was pure local state with fake defaults — today edits
+  the murid record, past days read/write `daily_habits` via
+  `getDailyHabitLogs`/`saveDailyHabitLog`. Any parent-side change resets
+  `divalidasi` so the wali kelas re-validates.
+- No migration needed (tables existed). Verified: 30 checks of
+  `supabase.ts` against PGlite running the real schema (fake PostgREST
+  client), 11-step jsdom e2e of `<App/>` (guru presensi/nilai/dhuha/catatan
+  survive a remount; orang tua calendar + quick record land in DB). Harness
+  in session scratchpad, not committed.
+
+## School name (2026-10-15)
+Official name is **"SD Negeri Percontohan PAM"** — replaced every "UPT SPF
+SDN Percontohan PAM (Kota) Makassar" / "SDN Percontohan PAM" / "SD
+Percontohan PAM" / "SDN PAM" variant in UI text, `index.html`, schema default
+(+ an UPDATE of the old default value in the seed section). Exceptions: the
+logo's curved emblem text stays "SDN PERCONTOHAN PAM" (the longer name
+doesn't fit the arc), and the email address is unchanged.
 
 ## No sample people (since 2026-09-28)
 - `INITIAL_TEACHERS` and `INITIAL_MURID` are empty; `INITIAL_ROMBEL` keeps the

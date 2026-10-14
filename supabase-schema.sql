@@ -1,5 +1,5 @@
 -- ==============================================================================
--- SIPAKAINGE - UPT SPF SDN PERCONTOHAN PAM MAKASSAR
+-- SIPAKAINGE - SD NEGERI PERCONTOHAN PAM
 -- Skema Database Supabase (PostgreSQL)
 --
 -- Cara pakai: Supabase Dashboard -> SQL Editor -> New Query -> tempel -> Run.
@@ -44,7 +44,7 @@ $$;
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.school_settings (
     id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-    school_name TEXT NOT NULL DEFAULT 'UPT SPF SDN Percontohan PAM Makassar',
+    school_name TEXT NOT NULL DEFAULT 'SD Negeri Percontohan PAM',
     principal_name TEXT NOT NULL,
     principal_nip TEXT,
     principal_photo_url TEXT,
@@ -339,6 +339,11 @@ VALUES (
     'https://lh3.googleusercontent.com/aida/AEtjO1UklTfGWNtEP7y35w9SEC_qhPmM2GY6gi2KtZIVmMfgt3R0mDdRTuX3UF3NObWCnUOXAhdfhOTeOHa2RByRewhyy6x32XI5_ywK86fmCh-aSvfPYnqQpgc-Rb6NBZqm-5xP4WU4wp5hghAEEyFtNVemogihS69vXboewTsf4zKpCrjlGUPeC29RQCVdl4ysa0_CYeOb5LGzjZRMtFoL-Coc7IKM85Fuwuc-xTKyh4reYNrD4ApB9NtLt6A'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Nama resmi sekolah (2026-10-15). Hanya mengganti nama lama bawaan.
+UPDATE public.school_settings
+SET school_name = 'SD Negeri Percontohan PAM'
+WHERE school_name = 'UPT SPF SDN Percontohan PAM Makassar';
 
 -- Old class list (superseded 2026-09-28). Removed only where no student still
 -- references them — murid_rombel_fkey is ON DELETE RESTRICT, so deleting a

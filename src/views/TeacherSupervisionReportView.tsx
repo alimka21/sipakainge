@@ -112,7 +112,7 @@ export const TeacherSupervisionReportView: React.FC<TeacherSupervisionReportView
         {/* Print-only letterhead */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-slate-800 pb-3 mb-2">
           <div>
-            <p className="text-sm font-extrabold">UPT SPF SDN Percontohan PAM Makassar</p>
+            <p className="text-sm font-extrabold">SD Negeri Percontohan PAM</p>
             <p className="text-xs">Laporan Hasil Supervisi Klinis Pendidik</p>
           </div>
           <p className="text-[10px] text-slate-500">Dicetak: {formatWitaDateTime()}</p>

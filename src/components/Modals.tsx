@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MuridRecord, SupervisionSession, TeacherRecord } from '../types';
+import React, { useEffect, useState } from 'react';
+import { MuridRecord, PrayerTimesChecklist, SupervisionSession, TeacherRecord } from '../types';
 import { HABIT_LIST, PRINCIPAL_NAME, PRINCIPAL_NIP } from '../data/mockData';
 import { getAcademicPeriod } from '../lib/time';
 
@@ -53,7 +53,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-2">
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Satuan Pendidikan:</span>
-              <span className="font-bold text-slate-900">UPT SPF SDN Percontohan PAM Makassar</span>
+              <span className="font-bold text-slate-900">SD Negeri Percontohan PAM</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Guru yang Diobservasi:</span>
@@ -138,12 +138,24 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
   );
 };
 
+export interface QuickRecordEntry {
+  muridId: string;
+  /** Nomor kebiasaan (HABIT_LIST id) yang dicentang hari ini. */
+  habitIds: number[];
+  wakeTime: string;
+  bedTime: string;
+  prayers: Partial<PrayerTimesChecklist>;
+  note: string;
+}
+
 interface QuickRecordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (count: number) => void;
+  onSave: (entry: QuickRecordEntry) => void;
   muridOptions: MuridRecord[];
 }
+
+const MOOD_LABEL = { ceria: 'Sangat ceria', semangat: 'Semangat', perlu_dukungan: 'Santai' } as const;
 
 export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
   isOpen,
@@ -154,20 +166,45 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
   const [selectedMuridId, setSelectedMuridId] = useState<string>('');
   const currentMurid = muridOptions.find((m) => m.id === selectedMuridId) ?? muridOptions[0];
 
-  const [selectedHabits, setSelectedHabits] = useState<number[]>([1, 2, 4, 5, 6]);
-  const [wakeTime, setWakeTime] = useState(currentMurid?.wakeUpTime || '05:00');
-  const [bedTime, setBedTime] = useState(currentMurid?.bedTime || '21:00');
+  const [selectedHabits, setSelectedHabits] = useState<number[]>([]);
+  const [wakeTime, setWakeTime] = useState('05:00');
+  const [bedTime, setBedTime] = useState('21:00');
   const [prayers, setPrayers] = useState({
-    subuh: true,
-    dzuhur: true,
-    ashar: true,
-    maghrib: true,
+    subuh: false,
+    dzuhur: false,
+    ashar: false,
+    maghrib: false,
     isya: false,
-    tadarus: true,
-    dhuha: true,
+    tadarus: false,
+    dhuha: false,
   });
   const [mood, setMood] = useState<'ceria' | 'semangat' | 'perlu_dukungan'>('ceria');
   const [quickNote, setQuickNote] = useState('');
+
+  // Isi formulir dari data murid yang tersimpan setiap kali modal dibuka atau
+  // murid diganti (dulu formulir selalu mulai dari centang bawaan palsu).
+  useEffect(() => {
+    if (!isOpen || !currentMurid) return;
+    setSelectedHabits(
+      Object.entries(currentMurid.habits || {})
+        .filter(([, done]) => done)
+        .map(([id]) => Number(id))
+    );
+    setWakeTime(currentMurid.wakeUpTime || '05:00');
+    setBedTime(currentMurid.bedTime || '21:00');
+    const p = currentMurid.prayers || ({} as PrayerTimesChecklist);
+    setPrayers({
+      subuh: !!p.subuh,
+      dzuhur: !!p.dzuhur,
+      ashar: !!p.ashar,
+      maghrib: !!p.maghrib,
+      isya: !!p.isya,
+      tadarus: !!p.tadarus,
+      dhuha: !!p.dhuha,
+    });
+    setQuickNote('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentMurid?.id]);
 
   if (!isOpen) return null;
 
@@ -193,11 +230,6 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
 
   const handleSelectMurid = (id: string) => {
     setSelectedMuridId(id);
-    const m = muridOptions.find((x) => x.id === id);
-    if (m) {
-      setWakeTime(m.wakeUpTime);
-      setBedTime(m.bedTime);
-    }
   };
 
   const toggle = (id: number) => {
@@ -454,7 +486,14 @@ export const QuickRecordModal: React.FC<QuickRecordModalProps> = ({
             </button>
             <button
               onClick={() => {
-                onSave(selectedHabits.length);
+                onSave({
+                  muridId: currentMurid.id,
+                  habitIds: selectedHabits,
+                  wakeTime,
+                  bedTime,
+                  prayers,
+                  note: [MOOD_LABEL[mood], quickNote.trim()].filter(Boolean).join(' — '),
+                });
                 onClose();
               }}
               className="rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-teal-700/20 hover:bg-teal-800 transition"

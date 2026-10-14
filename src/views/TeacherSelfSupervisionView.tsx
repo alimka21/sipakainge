@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID, PRINCIPAL_NAME } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
-import { uploadRPPDocument } from '../lib/supabase';
+import { newRecordId, uploadRPPDocument } from '../lib/supabase';
 import { formatWitaDate, getAcademicPeriod } from '../lib/time';
 import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
 
@@ -159,10 +159,16 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     const updatedList = currentMuridList.map(m => {
       if (m.id === selectedMuridId) {
         const currentAcademics = (m as any).academics || {};
-        const subjectKey = academicSubjectInput.trim().toUpperCase();
-        const existingSubject = currentAcademics[subjectKey] || { subject: academicSubjectInput.trim(), tasks: [] };
-        
-        const newTasks = [...existingSubject.tasks, { taskName: academicTaskName.trim(), score: Number(academicScore) }];
+        // Same key as ClassHabitsInputView / the DB (`mapel`): the subject name, matched case-insensitively.
+        const subjectName = academicSubjectInput.trim();
+        const subjectKey =
+          Object.keys(currentAcademics).find((k) => k.toLowerCase() === subjectName.toLowerCase()) || subjectName;
+        const existingSubject = currentAcademics[subjectKey] || { subject: subjectName, tasks: [] };
+
+        const newTasks = [
+          ...existingSubject.tasks,
+          { taskId: newRecordId(), taskName: academicTaskName.trim(), score: Number(academicScore) },
+        ];
         
         // Compute average score of all tasks to get active subject score
         const total = newTasks.reduce((sum: number, t: any) => sum + t.score, 0);
@@ -173,7 +179,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           academics: {
             ...currentAcademics,
             [subjectKey]: {
-              subject: academicSubjectInput.trim(),
+              subject: existingSubject.subject || subjectName,
               tasks: newTasks,
               score: avg
             }
@@ -203,7 +209,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
       if (m.id === selectedMuridId) {
         const currentPortfolios = (m as any).portfolios || [];
         const newPortfolioItem = {
-          id: `port-${Date.now()}`,
+          id: newRecordId(),
           title: portfolioTitle.trim(),
           category: portfolioCategory,
           description: portfolioDesc.trim(),
@@ -241,7 +247,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
       if (m.id === selectedMuridId) {
         const currentAchievements = (m as any).achievements || [];
         const newAchievementItem = {
-          id: `ach-${Date.now()}`,
+          id: newRecordId(),
           title: achievementTitle.trim(),
           category: achievementCategory, // e.g. Kota, Provinsi, Nasional, Sekolah, Kelas
           description: achievementDesc.trim(),
@@ -336,6 +342,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           rppFileName: res.name,
           rppFileSize: res.size,
           rppUploadDate: res.date,
+          rppUrl: res.url || '',
           rppStatus: 'BELUM_DIPERIKSA',
           status: 'DOKUMEN_DIUPLOAD'
         });
@@ -1006,7 +1013,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
 
                   <button
                     onClick={() => {
-                      updateSession({ rppFileName: '', rppFileSize: '', rppUploadDate: '', rppStatus: 'BELUM_DIPERIKSA' });
+                      updateSession({ rppFileName: '', rppFileSize: '', rppUploadDate: '', rppUrl: '', rppStatus: 'BELUM_DIPERIKSA' });
                     }}
                     disabled={!['DOKUMEN_DIUPLOAD', 'DISETUJUI', 'TERJADWAL'].includes(activeSession.status)}
                     className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-lg text-xs font-bold transition disabled:opacity-30"

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, MuridRecord, PrayerTimesChecklist, UserRole, RombelRecord } from '../types';
 import { INITIAL_MURID, HABIT_LIST, INITIAL_ROMBEL } from '../data/mockData';
-import { formatWitaDate, formatWitaDateTime, useNow } from '../lib/time';
+import { formatWitaDate, formatWitaDateTime, useNow, witaDateKey } from '../lib/time';
+import { newRecordId } from '../lib/supabase';
 import { getGuruClass } from '../lib/access';
 
 type WorkspaceTab = 'habits' | 'academics' | 'portfolios' | 'awards' | 'attendance';
@@ -41,7 +42,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   };
   const guruClassLabel = currentTeacher.assignedClass || '(belum ditugaskan)';
 
-  const [muridData, setMuridData] = useState<MuridRecord[]>(propMuridList || INITIAL_MURID);
+  // Read straight from App's list when provided — a local copy went stale and
+  // let edits (e.g. the prayer toggles) vanish when leaving the page.
+  const [localMuridData, setLocalMuridData] = useState<MuridRecord[]>(propMuridList || INITIAL_MURID);
+  const muridData = propMuridList ?? localMuridData;
+  const setMuridData = onUpdateMuridList ?? setLocalMuridData;
   const [selectedClass, setSelectedClass] = useState<string>(
     userRole === 'kepala_sekolah' ? '' : currentTeacher.assignedClass
   );
@@ -49,9 +54,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
   // Live WITA date & time from the server-synced clock (see lib/time.ts).
   const selectedDate = formatWitaDateTime(useNow());
   const [searchFilter, setSearchFilter] = useState<string>('');
-  const [guruNote, setGuruNote] = useState<string>(
-    'Ananda sangat disiplin mengikuti sholat dhuha berjamaah dan aktif membaca buku cerita di pojok baca kelas.'
-  );
+  const [guruNote, setGuruNote] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -111,7 +114,7 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
           };
           const updatedTasks = [
             ...currentSubjectData.tasks,
-            { taskId: `task-${Date.now()}`, taskName: academicTaskName, score: scoreNum },
+            { taskId: newRecordId(), taskName: academicTaskName, score: scoreNum },
           ];
           const avgScore = Math.round(updatedTasks.reduce((acc, t) => acc + t.score, 0) / updatedTasks.length);
 
@@ -132,9 +135,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     };
 
     setMuridData(updater);
-    if (onUpdateMuridList) {
-      onUpdateMuridList(updater);
-    }
     setAcademicTaskName('');
     setAcademicScore('');
     showToast(`✓ Berhasil menyimpan nilai akademik untuk ${activeMurid.name}!`);
@@ -152,10 +152,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     }
 
     const newPortfolio = {
-      id: `p-${Date.now()}`,
+      id: newRecordId(),
       title: portfolioTitle,
       category: portfolioCategory,
       date: formatWitaDate(),
+      dateKey: witaDateKey(),
       description: portfolioDescription,
       feedback: portfolioFeedback || 'Karya luar biasa yang terdokumentasi dengan baik.',
     };
@@ -174,9 +175,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     };
 
     setMuridData(updater);
-    if (onUpdateMuridList) {
-      onUpdateMuridList(updater);
-    }
     setPortfolioTitle('');
     setPortfolioDescription('');
     setPortfolioFeedback('');
@@ -195,10 +193,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     }
 
     const newAward = {
-      id: `aw-${Date.now()}`,
+      id: newRecordId(),
       title: awardTitle,
       category: awardCategory,
       date: formatWitaDate(),
+      dateKey: witaDateKey(),
       description: awardDescription,
     };
 
@@ -216,9 +215,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     };
 
     setMuridData(updater);
-    if (onUpdateMuridList) {
-      onUpdateMuridList(updater);
-    }
     setAwardTitle('');
     setAwardDescription('');
     showToast(`✓ Prestasi & apresiasi berhasil ditambahkan untuk ${activeMurid.name}!`);
@@ -232,8 +228,9 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     }
 
     const newAttendance = {
-      id: `att-${Date.now()}`,
+      id: newRecordId(),
       date: selectedDate,
+      dateKey: witaDateKey(),
       status: attendanceStatus,
       note: attendanceNote,
     };
@@ -241,7 +238,11 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     const updater = (prevList: MuridRecord[]) => {
       return prevList.map((m) => {
         if (m.id === activeMurid.id) {
-          const currentAttendance = (m as any).attendance || [];
+          // Satu presensi per murid per hari (sama dengan aturan unik di DB):
+          // mencatat ulang hari ini mengganti catatan sebelumnya.
+          const currentAttendance = ((m as any).attendance || []).filter(
+            (a: any) => a.dateKey !== newAttendance.dateKey
+          );
           return {
             ...m,
             attendance: [newAttendance, ...currentAttendance],
@@ -252,9 +253,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     };
 
     setMuridData(updater);
-    if (onUpdateMuridList) {
-      onUpdateMuridList(updater);
-    }
     setAttendanceNote('');
     showToast(`✓ Presensi ${activeMurid.name} berhasil dicatat: ${attendanceStatus}!`);
   };
@@ -284,21 +282,14 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
 
   // Handler for Guru School Prayers (Dhuha & Dhuhur)
   const handleTogglePrayer = (muridId: string, pKey: keyof PrayerTimesChecklist) => {
+    const target = muridData.find((m) => m.id === muridId);
+    if (!target) return;
+    const next = !target.prayers[pKey];
     setMuridData((prev) =>
-      prev.map((m) => {
-        if (m.id === muridId) {
-          const current = m.prayers[pKey];
-          const next = !current;
-          const label = pKey === 'dhuha' ? 'Sholat Dhuha' : pKey === 'dzuhur' ? 'Sholat Dhuhur' : pKey;
-          showToast(`${m.name}: ${label} ${next ? '✓ Selesai Terpantau' : 'Belum Selesai'}`);
-          return {
-            ...m,
-            prayers: { ...m.prayers, [pKey]: next },
-          };
-        }
-        return m;
-      })
+      prev.map((m) => (m.id === muridId ? { ...m, prayers: { ...m.prayers, [pKey]: next } } : m))
     );
+    const label = pKey === 'dhuha' ? 'Sholat Dhuha' : pKey === 'dzuhur' ? 'Sholat Dhuhur' : pKey;
+    showToast(`${target.name}: ${label} ${next ? '✓ Selesai Terpantau' : 'Belum Selesai'}`);
   };
 
   const handleValidateHomeHabits = () => {
@@ -319,9 +310,6 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     };
 
     setMuridData(updater);
-    if (onUpdateMuridList) {
-      onUpdateMuridList(updater);
-    }
 
     showToast(
       alreadyValidated
@@ -330,8 +318,16 @@ export const ClassHabitsInputView: React.FC<ClassHabitsInputViewProps> = ({
     );
   };
 
+  // Catatan wali kelas disimpan di murid.notes (kolom `notes` tabel murid).
+  useEffect(() => {
+    setGuruNote(activeMurid?.notes || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMurid?.id]);
+
   const handleSaveGuruNotes = () => {
     if (!activeMurid) return;
+    const note = guruNote.trim();
+    setMuridData((prev) => prev.map((m) => (m.id === activeMurid.id ? { ...m, notes: note || undefined } : m)));
     showToast(`Catatan jurnal perkembangan ${activeMurid.name} berhasil disimpan.`);
   };
 

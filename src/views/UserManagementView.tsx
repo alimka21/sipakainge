@@ -1518,7 +1518,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                       )}
                     </div>
                     <p className="text-xs text-slate-300 mt-1 max-w-xl">
-                      Penyimpanan persisten berbasis cloud untuk data Tenaga Pendidik, Murid, Catatan Harian 7 KAIH, dan Siklus Supervisi Klinis SIPAKAINGE SDN Percontohan PAM Makassar.
+                      Penyimpanan persisten berbasis cloud untuk data Tenaga Pendidik, Murid, Catatan Harian 7 KAIH, dan Siklus Supervisi Klinis SIPAKAINGE SD Negeri Percontohan PAM.
                     </p>
                   </div>
                 </div>

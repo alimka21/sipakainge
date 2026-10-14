@@ -203,7 +203,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
         {activeMurid && (
           <div className="hidden print:flex items-center justify-between border-b-2 border-slate-800 pb-3 mb-4">
             <div>
-              <p className="text-sm font-extrabold">UPT SPF SDN Percontohan PAM Makassar</p>
+              <p className="text-sm font-extrabold">SD Negeri Percontohan PAM</p>
               <p className="text-xs">Laporan Portofolio & Profil Holistik Murid</p>
             </div>
             <p className="text-[10px] text-slate-500">Dicetak: {formatWitaDateTime()}</p>
@@ -322,7 +322,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                       </div>
                       <div>
                         <span className="font-semibold text-slate-400 block">Sekolah:</span>
-                        <span className="font-bold text-slate-700">SD Percontohan PAM</span>
+                        <span className="font-bold text-slate-700">SD Negeri Percontohan PAM</span>
                       </div>
                     </div>
                   </div>

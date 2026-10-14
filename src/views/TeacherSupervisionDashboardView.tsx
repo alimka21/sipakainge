@@ -193,7 +193,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
                   Dasbor Rekap Supervisi (Guru)
                 </h1>
                 <p className="mt-2 text-xs sm:text-sm text-slate-200/90 leading-relaxed">
-                  Keterbukaan informasi pelaksanaan supervisi klinis reflektif berkelanjutan (*Sipakainge, Sipakalebbi, Sipakatau*) bagi seluruh pendidik UPT SPF SDN Percontohan PAM Makassar.
+                  Keterbukaan informasi pelaksanaan supervisi klinis reflektif berkelanjutan (*Sipakainge, Sipakalebbi, Sipakatau*) bagi seluruh pendidik SD Negeri Percontohan PAM.
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-xs text-teal-300">
                   <span className="material-symbols-outlined text-base">verified_user</span>
@@ -604,7 +604,7 @@ export const TeacherSupervisionDashboardView: React.FC<TeacherSupervisionDashboa
             {/* Footer Summary Table */}
             <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
               <p>
-                Menampilkan <strong>{filteredTeachers.length}</strong> dari <strong>{teacherList.length}</strong> pendidik UPT SPF SDN Percontohan PAM Makassar.
+                Menampilkan <strong>{filteredTeachers.length}</strong> dari <strong>{teacherList.length}</strong> pendidik SD Negeri Percontohan PAM.
               </p>
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 font-semibold text-emerald-700">

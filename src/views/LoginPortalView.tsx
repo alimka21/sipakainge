@@ -59,7 +59,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
 
             <div>
               <span className="text-[11px] text-[#89f5e7] uppercase font-bold tracking-wider">
-                UPT SPF SDN PERCONTOHAN PAM MAKASSAR
+                SD NEGERI PERCONTOHAN PAM
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 leading-snug">
                 Sistem Terpadu Pemantauan Pembelajaran, Supervisi Guru & Pembiasaan Karakter Murid.
@@ -133,7 +133,7 @@ export const LoginPortalView: React.FC<LoginPortalViewProps> = ({ onLogin, onNav
               <SchoolLogo className="h-12 w-12 rounded-2xl bg-white shadow-xs p-0.5 border border-slate-200/80 shrink-0" />
               <div className="flex flex-col">
                 <h2 className="text-lg font-bold text-slate-900 leading-tight">Portal SIPAKAINGE Terpadu</h2>
-                <p className="text-xs text-slate-500">SDN Percontohan PAM Makassar • Masuk Akun</p>
+                <p className="text-xs text-slate-500">SD Negeri Percontohan PAM • Masuk Akun</p>
               </div>
             </div>
 

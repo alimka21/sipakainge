@@ -431,8 +431,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-600 max-w-3xl">
-            Sistem Pembelajaran Kolaboratif Berbasis Data, Asesmen, Refleksi dan Transformasi — UPT SPF SDN Percontohan
-            PAM Kota Makassar
+            Sistem Pembelajaran Kolaboratif Berbasis Data, Asesmen, Refleksi dan Transformasi — SD Negeri Percontohan PAM
           </p>
         </div>
 
@@ -676,7 +675,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             </div>
             <h3 className="text-sm font-bold text-slate-900">Semua Tindakan Selesai Diperiksa!</h3>
             <p className="text-xs text-slate-600 max-w-md mx-auto">
-              Luar biasa! Seluruh tenaga pendidik UPT SPF SDN Percontohan PAM Kota Makassar berada dalam status aman. Tidak ada antrean tugas verifikasi atau observasi yang tersisa hari ini.
+              Luar biasa! Seluruh tenaga pendidik SD Negeri Percontohan PAM berada dalam status aman. Tidak ada antrean tugas verifikasi atau observasi yang tersisa hari ini.
             </p>
           </div>
         )}
@@ -1155,7 +1154,7 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             <span className="material-symbols-outlined text-2xl">psychology_alt</span>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Prinsip Supervisi SIPAKAINGE SDN Percontohan PAM</h3>
+            <h3 className="text-sm font-bold text-slate-900">Prinsip Supervisi SIPAKAINGE SD Negeri Percontohan PAM</h3>
             <p className="text-xs text-slate-600 max-w-2xl leading-relaxed mt-0.5">
               "Sipakainge, Sipakalebbi, Sipakatau" — Supervisi akademik bukan untuk menghakimi atau mencari kesalahan,
               melainkan wadah reflektif pendidik untuk bertumbuh dan memfasilitasi kebutuhan murid secara humanis.
