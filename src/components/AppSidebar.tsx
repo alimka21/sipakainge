@@ -46,7 +46,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   SIPAKAINGE
                 </p>
                 <p className="text-[10px] text-slate-500 font-medium truncate">
-                  SD Negeri Percontohan PAM
+                  UPT SPF SD NEGERI PERCONTOHAN PAM
                 </p>
               </div>
             </div>

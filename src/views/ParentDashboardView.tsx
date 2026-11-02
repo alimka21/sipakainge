@@ -446,7 +446,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   </p>
                 </div>
                 <div className="mt-4 pt-2 border-t border-white/20 flex items-center justify-between">
-                  <span className="text-[11px] text-white/70">SIPAKAINGE SD Negeri Percontohan PAM</span>
+                  <span className="text-[11px] text-white/70">SIPAKAINGE UPT SPF SD NEGERI PERCONTOHAN PAM</span>
                   <button
                     type="button"
                     onClick={() => onNavigate('parent_portfolio')}

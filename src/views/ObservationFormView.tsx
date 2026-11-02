@@ -32,7 +32,7 @@ const DOKUMEN_KELENGKAPAN_ITEMS = [
   { id: 10, category: 'III. MEDIA DAN MATERIAL AJAR', title: 'Bahan Ajar / Handout / Modul Pendukung , Cetak atau digital' },
   { id: 11, category: 'III. MEDIA DAN MATERIAL AJAR', title: 'Lembar Kerja Peserta Didik (LKPD) , Dirancang mengarah pada pembentukan nalar kritis/kreatif' },
   { id: 12, category: 'III. MEDIA DAN MATERIAL AJAR', title: 'Media Pembelajaran, Alat peraga, presentasi digital, atau pemanfaatan PMM/sumber belajar local' },
-  { id: 13, category: 'IV. DOKUMEN MANAJEMEN KELAS & ADMINISTRASI GURU', title: 'Kalender Pendidikan, Ditandai agenda internal SMPN 6 Moncongloe & Dinas Pendidikan' },
+  { id: 13, category: 'IV. DOKUMEN MANAJEMEN KELAS & ADMINISTRASI GURU', title: 'Kalender Pendidikan, Ditandai agenda internal UPT SPF UPT SPF SD NEGERI PERCONTOHAN PAM & Dinas Pendidikan' },
   { id: 14, category: 'IV. DOKUMEN MANAJEMEN KELAS & ADMINISTRASI GURU', title: 'Jadwal Mengajar & Rincian Beban Kerja Guru' },
   { id: 15, category: 'IV. DOKUMEN MANAJEMEN KELAS & ADMINISTRASI GURU', title: 'Buku Absensi & Catatan Perkembangan Peserta Didik' },
   { id: 16, category: 'IV. DOKUMEN MANAJEMEN KELAS & ADMINISTRASI GURU', title: 'Jurnal Harian Mengajar Guru' },
@@ -270,7 +270,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-teal-300 uppercase">
-                  SMPN 6 MONCONGLOE
+                  UPT SPF UPT SPF SD NEGERI PERCONTOHAN PAM
                 </span>
                 <span className="rounded-full bg-teal-500/20 px-2.5 py-0.5 text-[10px] font-bold text-teal-300 border border-teal-500/30">
                   Status Alur: {activeSession.status}
@@ -1304,7 +1304,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                   <p className="text-sm font-extrabold text-purple-900 bg-purple-50 px-3 py-1 rounded border border-purple-200 w-fit mt-1">
                     {activeSession.tindakLanjutKS.replace(/_/g, ' ')}
                   </p>
-                  <p className="text-[11px] text-slate-500">Telah divalidasi oleh Kepala Sekolah SMPN 6 Moncongloe.</p>
+                  <p className="text-[11px] text-slate-500">Telah divalidasi oleh Kepala Sekolah UPT SPF UPT SPF SD NEGERI PERCONTOHAN PAM.</p>
                 </div>
               </div>
             </div>
@@ -1362,7 +1362,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider">Pedoman Supervisi Klinis</h4>
             </div>
             <p className="text-xs text-slate-200/95 leading-relaxed">
-              "Sipakainge, Sipakalebbi, Sipakatau" — Mengutamakan prinsip transparansi dan pertumbuhan berkelanjutan bagi seluruh pendidik SMPN 6 Moncongloe.
+              "Sipakainge, Sipakalebbi, Sipakatau" — Mengutamakan prinsip transparansi dan pertumbuhan berkelanjutan bagi seluruh pendidik UPT SPF UPT SPF SD NEGERI PERCONTOHAN PAM.
             </p>
             <div className="pt-2 border-t border-white/10 text-[10px] text-slate-400">
               Sistem Digital Supervisi Akademik © {getAcademicPeriod().tahunAjaran}

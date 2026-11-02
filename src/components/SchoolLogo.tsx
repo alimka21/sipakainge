@@ -14,7 +14,7 @@ export const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = 'h-12 w-12',
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Logo SD Negeri Percontohan PAM"
+      aria-label="Logo UPT SPF SD NEGERI PERCONTOHAN PAM"
     >
       {/* Background circle */}
       <circle cx="100" cy="100" r="96" fill="#ffffff" stroke="#e2e8f0" strokeWidth="2" />

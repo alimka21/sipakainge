@@ -220,7 +220,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
                   Dasbor Rekap 7 KAIH (Murid)
                 </h1>
                 <p className="mt-2 text-xs sm:text-sm text-teal-100/90 leading-relaxed">
-                  Transparansi progres pembiasaan karakter 7 Kebiasaan Anak Indonesia Hebat (7 KAIH), sholat 5 waktu wajib + doa, serta pencatatan waktu bangun pagi dan tidur cepat seluruh murid SD Negeri Percontohan PAM.
+                  Transparansi progres pembiasaan karakter 7 Kebiasaan Anak Indonesia Hebat (7 KAIH), sholat 5 waktu wajib + doa, serta pencatatan waktu bangun pagi dan tidur cepat seluruh murid UPT SPF SD NEGERI PERCONTOHAN PAM.
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-xs text-teal-300">
                   <span className="material-symbols-outlined text-base">verified_user</span>
@@ -1028,7 +1028,7 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
               </div>
 
               <span className="text-teal-800 font-semibold">
-                Tersinkronisasi otomatis dengan Buku Pemantauan Murid SD Negeri Percontohan PAM
+                Tersinkronisasi otomatis dengan Buku Pemantauan Murid UPT SPF SD NEGERI PERCONTOHAN PAM
               </span>
             </div>
           </div>

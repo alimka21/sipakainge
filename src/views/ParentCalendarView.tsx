@@ -294,7 +294,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                       <span>•</span>
                       <span>Wali Kelas: {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}</span>
                       <span>•</span>
-                      <span>SD Negeri Percontohan PAM</span>
+                      <span>UPT SPF SD NEGERI PERCONTOHAN PAM</span>
                     </p>
                   </div>
                 </div>

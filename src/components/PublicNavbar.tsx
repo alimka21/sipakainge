@@ -40,7 +40,7 @@ export const PublicNavbar: React.FC<PublicNavbarProps> = ({ currentScreen, onNav
               SIPAKAINGE
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-500 uppercase tracking-wider font-bold">
-              SD Negeri Percontohan PAM
+              UPT SPF SD NEGERI PERCONTOHAN PAM
             </span>
           </div>
         </div>

@@ -53,7 +53,7 @@ export const BeritaAcaraModal: React.FC<BeritaAcaraModalProps> = ({
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-2">
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Satuan Pendidikan:</span>
-              <span className="font-bold text-slate-900">SD Negeri Percontohan PAM</span>
+              <span className="font-bold text-slate-900">UPT SPF SD NEGERI PERCONTOHAN PAM</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Guru yang Diobservasi:</span>

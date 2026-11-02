@@ -65,7 +65,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eff4ff] text-[#0b1c30]">
             <SchoolLogo className="h-6 w-6 rounded-full bg-white shadow-2xs shrink-0 ring-1 ring-teal-600/30" />
             <span className="text-xs font-semibold text-[#00685f] truncate max-w-[220px] sm:max-w-none">
-              SD Negeri Percontohan PAM
+              UPT SPF SD NEGERI PERCONTOHAN PAM
             </span>
             <span className="text-slate-300 text-xs hidden md:inline">•</span>
             <span className="text-xs text-slate-500 font-medium hidden md:inline">
@@ -157,7 +157,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Konfirmasi Keluar Akun</h3>
-                <p className="text-xs text-slate-500">SIPAKAINGE SD Negeri Percontohan PAM</p>
+                <p className="text-xs text-slate-500">SIPAKAINGE UPT SPF SD NEGERI PERCONTOHAN PAM</p>
               </div>
             </div>
 

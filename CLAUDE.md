@@ -398,8 +398,14 @@ entered on the input screens lived only in React state. Live DB check showed
   survive a remount; orang tua calendar + quick record land in DB). Harness
   in session scratchpad, not committed.
 
-## School name (2026-10-15)
-Official name is **"SD Negeri Percontohan PAM"** — replaced every "UPT SPF
+## School name (2026-10-15, renamed 2026-11-02)
+> 2026-11-02: official name is now **"UPT SPF SD NEGERI PERCONTOHAN PAM"**
+> (exact uppercase, everywhere — UI, `index.html`, `metadata.json`, schema
+> default + seed UPDATE of both older defaults). `ObservationFormView.tsx` still
+> had leftover "SMPN 6 Moncongloe" text from another project; replaced too.
+> Logo emblem arc text still "SDN PERCONTOHAN PAM".
+
+Previously the official name was **"SD Negeri Percontohan PAM"** — replaced every "UPT SPF
 SDN Percontohan PAM (Kota) Makassar" / "SDN Percontohan PAM" / "SD
 Percontohan PAM" / "SDN PAM" variant in UI text, `index.html`, schema default
 (+ an UPDATE of the old default value in the seed section). Exceptions: the
