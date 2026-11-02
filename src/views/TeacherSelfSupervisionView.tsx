@@ -39,7 +39,14 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   };
 
   // Simulator Switcher - let testing users select which teacher they want to act as!
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(guruId || teacherList[0]?.id || '');
+  const [pickedTeacherId, setSelectedTeacherId] = useState<string>(guruId || teacherList[0]?.id || '');
+  // Never key the session by an id that isn't in the list (e.g. '' when the
+  // list was still loading) — that session could never be saved to the DB.
+  const selectedTeacherId = teacherList.some((t) => t.id === pickedTeacherId)
+    ? pickedTeacherId
+    : guruId && teacherList.some((t) => t.id === guruId)
+      ? guruId
+      : teacherList[0]?.id || '';
   const teacher = teacherList.find((t) => t.id === selectedTeacherId) || teacherList[0];
 
   const [activeTab, setActiveTab] = useState<'stepper' | 'identitas' | 'modul' | 'refleksi' | 'hasil' | 'data_murid'>('stepper');

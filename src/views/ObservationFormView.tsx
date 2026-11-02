@@ -101,11 +101,21 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
 }) => {
   // 1. Selector for current active teacher / session
   const [localTeacherId, setLocalTeacherId] = useState<string>('');
-  const selectedTeacherId = propSelectedTeacherId || localTeacherId;
+  const requestedTeacherId = propSelectedTeacherId || localTeacherId;
+  // Opened from the sidebar, no guru is chosen yet ('') — the dropdown then
+  // *shows* the first guru, so the session must be stored under that guru's
+  // id too. Before this, edits went to sessionStates[''] and the DB write
+  // failed (teacher_id '' isn't a teacher), so the supervision was lost on reload.
+  const selectedTeacherId = teacherList.some((t) => t.id === requestedTeacherId)
+    ? requestedTeacherId
+    : teacherList[0]?.id || '';
   const setSelectedTeacherId = (id: string) => {
     if (onSelectTeacherId) onSelectTeacherId(id);
     setLocalTeacherId(id);
   };
+  useEffect(() => {
+    if (selectedTeacherId && selectedTeacherId !== requestedTeacherId) setSelectedTeacherId(selectedTeacherId);
+  }, [selectedTeacherId, requestedTeacherId]);
   const currentTeacher = teacherList.find((t) => t.id === selectedTeacherId) || teacherList[0];
 
   // 2. Active Tab of the 8-Step Stepper

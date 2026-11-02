@@ -398,6 +398,20 @@ entered on the input screens lived only in React state. Live DB check showed
   survive a remount; orang tua calendar + quick record land in DB). Harness
   in session scratchpad, not committed.
 
+## Supervision lost when opened from the sidebar (fixed 2026-11-02)
+User report: a guru was supervised but nothing was recorded. Cause: the
+sidebar "Observasi" button navigates to `observation_form` without picking a
+guru, so `selectedTeacherId` was `''`. The `<select>` *displayed* the first
+guru (no option matched `''`), but every `updateSession` wrote
+`sessionStates['']`, and the upsert failed (`teacher_id ''` violates the FK) —
+the data lived only in memory and vanished on reload. Picking that first guru
+in the dropdown didn't help (no `onChange` fires for the already-shown
+option). Now `ObservationFormView` keys the session by an id that exists in
+`teacherList` (fallback `teacherList[0].id`) and pushes it back to App via
+`onSelectTeacherId`; `TeacherSelfSupervisionView` got the same fallback (its
+`useState` initial id could be `''` if the list hadn't loaded). Lost
+in-memory sessions from before the fix are not recoverable.
+
 ## School name (2026-10-15, renamed 2026-11-02)
 > 2026-11-02: official name is now **"UPT SPF SD NEGERI PERCONTOHAN PAM"**
 > (exact uppercase, everywhere — UI, `index.html`, `metadata.json`, schema
