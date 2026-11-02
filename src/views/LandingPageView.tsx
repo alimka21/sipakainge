@@ -364,8 +364,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   7 Kebiasaan Anak Indonesia Hebat (7 KAIH)
                 </h2>
                 <p className="text-sm text-slate-600 mt-2">
-                  Bukan sekadar hafalan, melainkan pola hidup yang mengakar dalam rutinitas keseharian murid SD Negeri
-                  Percontohan PAM mulai dari fajar hingga beristirahat malam.
+                  Bukan sekadar hafalan, melainkan pola hidup yang mengakar dalam rutinitas keseharian murid UPT SPF SD NEGERI
+                  PERCONTOHAN PAM mulai dari fajar hingga beristirahat malam.
                 </p>
               </div>
 
