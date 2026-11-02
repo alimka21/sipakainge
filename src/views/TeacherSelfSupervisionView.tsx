@@ -61,7 +61,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     tujuan: '',
     tanggal: '',
     jam: teacher.scheduleTime,
-    lokasi: 'Ruang Kelas ' + teacher.rombel.split(' ')[1] || 'Ruang Kelas',
+    lokasi: teacher.rombel ? `Ruang ${teacher.rombel}` : '',
     supervisor: `${principalName} (Kepala Sekolah)`,
     catatanAwal: '',
     rppFileName: '',
@@ -102,7 +102,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     setDraftTujuan(activeSession.tujuan || '');
     setDraftTanggal(activeSession.tanggal || '');
     setDraftJam(activeSession.jam || teacher.scheduleTime);
-    setDraftLokasi(activeSession.lokasi || 'Ruang ' + teacher.rombel);
+    setDraftLokasi(activeSession.lokasi || (teacher.rombel ? `Ruang ${teacher.rombel}` : ''));
     setDraftSupervisor(activeSession.supervisor || `${principalName} (Kepala Sekolah)`);
     setDraftCatatanAwal(activeSession.catatanAwal || '');
   }, [selectedTeacherId, activeSession.status]);
