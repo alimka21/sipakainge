@@ -3,6 +3,7 @@ import { ScreenId, SupervisionSession, SupervisionStatus, MuridRecord, TeacherRe
 import { APP_ASSETS, INITIAL_TEACHERS, INITIAL_MURID, PRINCIPAL_NAME } from '../data/mockData';
 import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { newRecordId, uploadRPPDocument } from '../lib/supabase';
+import RppFileActions from '../components/RppFileActions';
 import { formatWitaDate, getAcademicPeriod } from '../lib/time';
 import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
 
@@ -1015,6 +1016,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                     <div className="text-xs">
                       <h4 className="font-extrabold text-slate-900 break-all">{activeSession.rppFileName}</h4>
                       <p className="text-slate-500 mt-1">Ukuran: {activeSession.rppFileSize} • Diunggah: {activeSession.rppUploadDate}</p>
+                      <RppFileActions rppUrl={activeSession.rppUrl} rppFileName={activeSession.rppFileName} onUnavailable={showToast} className="mt-2" />
                     </div>
                   </div>
 

@@ -495,6 +495,19 @@ export async function recordDailyHabit(
 }
 
 /**
+ * Salinan lokal (blob URL) dari RPP yang diunggah di tab ini, per nama berkas.
+ * Dipakai untuk pratinjau/unduh bila berkas tidak sampai ke Storage (Supabase
+ * belum diatur / bucket gagal). Hilang saat halaman dimuat ulang.
+ */
+const localRppFiles = new Map<string, string>();
+
+/** URL yang bisa dibuka untuk RPP sesi ini: URL Storage bila ada, kalau tidak salinan lokal. */
+export function resolveRppFileUrl(rppUrl?: string, rppFileName?: string): string {
+  if (rppUrl && /^https?:\/\//.test(rppUrl) && !rppUrl.includes('mock-supabase-storage.local')) return rppUrl;
+  return (rppFileName && localRppFiles.get(rppFileName)) || '';
+}
+
+/**
  * Mengunggah dokumen RPP/Modul Ajar ke Supabase Storage (atau simulasi jika belum dikonfigurasi)
  */
 export async function uploadRPPDocument(file: File): Promise<{
@@ -507,6 +520,11 @@ export async function uploadRPPDocument(file: File): Promise<{
 }> {
   const dateStr = formatWitaShortDate();
   const sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+  if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    const prev = localRppFiles.get(file.name);
+    if (prev) URL.revokeObjectURL(prev);
+    localRppFiles.set(file.name, URL.createObjectURL(file));
+  }
 
   if (isSupabaseConfigured() && supabase) {
     try {
@@ -519,7 +537,7 @@ export async function uploadRPPDocument(file: File): Promise<{
         console.warn('Storage upload error, trying mock fallback:', error);
         return {
           success: true,
-          url: `https://mock-supabase-storage.local/rpp/${fileName}`,
+          url: '',
           name: file.name,
           size: sizeStr,
           date: dateStr,

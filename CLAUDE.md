@@ -412,6 +412,23 @@ option). Now `ObservationFormView` keys the session by an id that exists in
 `useState` initial id could be `''` if the list hadn't loaded). Lost
 in-memory sessions from before the fix are not recoverable.
 
+## RPP preview / open / download (since 2026-11-03) — `src/components/RppFileActions.tsx`
+- `<RppFileActions rppUrl rppFileName onUnavailable />` = 3 buttons: Pratinjau
+  (modal + iframe), Buka di Tab Baru, Unduh. Used in `ObservationFormView`
+  step 3 (uploaded-file card) + step 4 banner (replaced the fake
+  `alert('Mengunduh...')`), `TeacherSelfSupervisionView` file card, and
+  `SupervisionDashboardView` row icons (`folder_open` → new tab, `download` →
+  download; were toast-only) via exported `openRppInNewTab`/`downloadRpp`.
+- URL comes from `resolveRppFileUrl(rppUrl, rppFileName)` (`supabase.ts`):
+  the Storage public URL, else a blob URL cached in `localRppFiles` by
+  `uploadRPPDocument` (same tab only, lost on reload). The fake
+  `mock-supabase-storage.local` URL is no longer saved (now `''`), old rows
+  with it are treated as unavailable. Cross-device viewing needs `rpp_bucket`.
+- Download of a Storage URL uses `?download=<name>` (the `download` attribute
+  is ignored cross-origin). `.doc/.docx` preview goes through Office Online
+  viewer (`view.officeapps.live.com`, public URL only); PDF renders natively.
+- Not verified in a real browser (no browser access) — tsc + build only.
+
 ## School name (2026-10-15, renamed 2026-11-02)
 > 2026-11-02: official name is now **"UPT SPF SD NEGERI PERCONTOHAN PAM"**
 > (exact uppercase, everywhere — UI, `index.html`, `metadata.json`, schema

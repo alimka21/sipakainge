@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types';
 import { APP_ASSETS, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
+import RppFileActions from '../components/RppFileActions';
 import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs } from '../lib/supervisionStateMachine';
 import { getAcademicPeriod } from '../lib/time';
 
@@ -600,6 +601,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                       {activeSession.rppStatus === 'BELUM_DIPERIKSA' ? 'BELUM DIPERIKSA' : 'DIPERIKSA'}
                     </span>
                   </div>
+                  <RppFileActions rppUrl={activeSession.rppUrl} rppFileName={activeSession.rppFileName} onUnavailable={triggerToast} />
                 </div>
               )}
             </div>
@@ -644,13 +646,12 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                     Nama File: <strong className="text-slate-800">{activeSession.rppFileName || 'Belum diupload'}</strong>
                   </p>
                   {userRole === 'kepala_sekolah' && activeSession.rppFileName && (
-                    <button
-                      onClick={() => alert(`Mengunduh file ${activeSession.rppFileName}...`)}
-                      className="mt-2 text-xs text-teal-800 font-bold hover:underline flex items-center gap-1"
-                    >
-                      <span>Unduh Modul PDF Untuk Ditelaah</span>
-                      <span className="material-symbols-outlined text-xs">download</span>
-                    </button>
+                    <RppFileActions
+                      rppUrl={activeSession.rppUrl}
+                      rppFileName={activeSession.rppFileName}
+                      onUnavailable={triggerToast}
+                      className="mt-2"
+                    />
                   )}
                 </div>
               </div>

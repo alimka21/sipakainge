@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScreenId, TeacherRecord, MuridRecord } from '../types';
 import { INITIAL_TEACHERS, APP_ASSETS, INITIAL_MURID } from '../data/mockData';
 import { formatWitaDate, useNow, getAcademicPeriod } from '../lib/time';
+import { openRppInNewTab, downloadRpp, RPP_UNAVAILABLE_MESSAGE } from '../components/RppFileActions';
 
 interface SupervisionDashboardViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -174,7 +175,10 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </button>
           <button
             type="button"
-            onClick={() => triggerToast(`Membuka folder RPP ${t.name}`)}
+            onClick={() => {
+              if (!sess?.rppFileName) triggerToast(`${t.name} belum mengunggah RPP.`);
+              else if (!openRppInNewTab(sess.rppUrl, sess.rppFileName)) triggerToast(RPP_UNAVAILABLE_MESSAGE);
+            }}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
             title="Lihat RPP"
           >
@@ -249,7 +253,10 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
         </button>
         <button
           type="button"
-          onClick={() => triggerToast(`Mengunduh berkas ${t.name}`)}
+          onClick={() => {
+            if (!sess?.rppFileName) triggerToast(`${t.name} belum mengunggah RPP.`);
+            else if (!downloadRpp(sess.rppUrl, sess.rppFileName)) triggerToast(RPP_UNAVAILABLE_MESSAGE);
+          }}
           className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
           title="Unduh Berkas"
         >
