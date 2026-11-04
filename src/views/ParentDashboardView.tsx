@@ -43,6 +43,20 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
     return Object.values(m.habits).filter(Boolean).length;
   };
 
+  // Presensi tahun ajaran berjalan, dari catatan wali kelas (tabel presensi).
+  const attendanceList: { status: string }[] = (activeMurid as any)?.attendance || [];
+  const countStatus = (st: string) => attendanceList.filter((x) => x.status === st).length;
+  const presensi = {
+    total: attendanceList.length,
+    hadir: countStatus('Hadir'),
+    sakit: countStatus('Sakit'),
+    izin: countStatus('Izin'),
+    alpa: countStatus('Alpa'),
+    pct: attendanceList.length ? Math.round((countStatus('Hadir') / attendanceList.length) * 1000) / 10 : 0,
+  };
+  const nilaiScores = Object.values((activeMurid as any)?.academics || {}).map((x: any) => Number(x.score));
+  const rerataNilai = nilaiScores.length ? Math.round(nilaiScores.reduce((sum, n) => sum + n, 0) / nilaiScores.length) : null;
+
   return (
     <div className="w-full pb-16 font-['Plus_Jakarta_Sans',sans-serif] px-6 lg:px-10 py-6 space-y-6">
       {/* SECTION 1: Student Selection (Kepala Sekolah / Guru monitor multiple students) */}
@@ -248,13 +262,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
           </section>
 
           {/* SECTION 3: Overview Metric Cards (Bento 3-Card Grid) */}
+
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Metric 1: Kehadiran */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <span className="text-xs uppercase tracking-wider text-slate-400 font-bold">Kehadiran Sekolah</span>
-                  <span className="text-xs text-slate-500 mt-0.5">{getAcademicPeriod().label}</span>
+                  <span className="text-xs text-slate-500 mt-0.5">Tahun Ajaran {getAcademicPeriod().tahunAjaran}</span>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-[#006947]/10 text-[#006947] flex items-center justify-center">
                   <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -263,20 +278,20 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </div>
               </div>
               <div className="my-4 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-slate-900 tabular-nums">98.4%</span>
+                <span className="text-3xl font-extrabold text-slate-900 tabular-nums">
+                  {presensi.total ? `${presensi.pct}%` : '—'}
+                </span>
                 <span className="text-xs text-[#006947] font-bold bg-[#6ffbbe]/40 px-2 py-0.5 rounded-full">
-                  Sangat Rajin
+                  {presensi.total ? `${presensi.hadir} dari ${presensi.total} hari` : 'Belum ada presensi'}
                 </span>
               </div>
               <div className="space-y-1.5">
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div className="bg-[#00855b] h-full rounded-full" style={{ width: '98.4%' }}></div>
+                  <div className="bg-[#00855b] h-full rounded-full" style={{ width: `${presensi.pct}%` }}></div>
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span className="flex items-center gap-1 text-[#006947] font-semibold">
-                    <span className="material-symbols-outlined text-xs">verified</span> Tepat Waktu & Konsisten
-                  </span>
-                  <span>0 Hari Alpa / Sakit 1</span>
+                  <span>Dari presensi yang dicatat wali kelas</span>
+                  <span>Sakit {presensi.sakit} / Izin {presensi.izin} / Alpa {presensi.alpa}</span>
                 </div>
               </div>
             </div>
@@ -304,23 +319,22 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     if (scores.length > 0) {
                       return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
                     }
-                    return 88.5; // fallback default
+                    return '—';
                   })()}
                 </span>
                 <span className="text-xs text-slate-400">/ 100</span>
-                <span className="text-xs text-[#00685f] font-bold bg-[#89f5e7]/40 px-2 py-0.5 rounded-full">
-                  Kompeten
-                </span>
+                {rerataNilai === null && (
+                  <span className="text-xs text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full">Belum ada nilai</span>
+                )}
               </div>
               <div className="space-y-1.5">
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div className="bg-[#4b41e1] h-full rounded-full" style={{ width: '88%' }}></div>
+                  <div className="bg-[#4b41e1] h-full rounded-full" style={{ width: `${rerataNilai ?? 0}%` }}></div>
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500">
                   <span className="font-medium text-slate-700 truncate max-w-[200px]">
                     Wali Kelas: {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}
                   </span>
-                  <span className="text-[#00685f] font-bold">Tercapai Optimal</span>
                 </div>
               </div>
             </div>
@@ -343,7 +357,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   {Math.round((calculateDoneHabits(activeMurid) / 7) * 100)}%
                 </span>
                 <span className="text-xs text-[#006947] font-bold bg-[#6ffbbe]/40 px-2 py-0.5 rounded-full">
-                  Tuntas Terverifikasi
+                  {(activeMurid as any).homeHabitsValidated ? 'Tervalidasi Wali Kelas' : 'Hari Ini'}
                 </span>
               </div>
               <div className="space-y-1.5">

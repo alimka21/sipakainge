@@ -412,6 +412,54 @@ option). Now `ObservationFormView` keys the session by an id that exists in
 `useState` initial id could be `''` if the list hadn't loaded). Lost
 in-memory sessions from before the fix are not recoverable.
 
+## Supervision scores wiped by another device (fixed 2026-11-04)
+User report: M. Ilham Ramadhan was scored + observed, next day data gone. Live
+row (`teacher_id t-import-1790561358362-9`) existed, status `SELESAI`, reflections
+filled, but `scores22`/`aspect_status14` `{}` and `scores17` 3/17. `obs_notes`
+and `penguatan_ks`/`catatan_khusus_ks`/`rekomendasi_ks` held the exact default
+strings of the `[Simulasikan ...]` buttons in `TeacherSelfSupervisionView` —
+the guru account advanced KS-only stages itself.
+- Cause 1: `upsertSupervisionSession` wrote the WHOLE row; each device only
+  loads sessions at mount, so a device with an older copy (guru filling
+  refleksi) overwrote KS's scores with `{}` (last write wins).
+  Fix: App tracks changed fields per teacher (`sessionDirty`, JSON diff in
+  `updateSessionStatesAndSync`) and `upsertSupervisionSession(id, s, fields)`
+  writes only those columns (`SESSION_FIELD_COLUMN`; all other columns have DB
+  defaults, so a partial insert is fine). Sessions are re-fetched on
+  `visibilitychange` + every 60 s and merged, keeping dirty/in-flight fields.
+- Cause 2: simulator buttons were live in production.
+- Lost scores are not recoverable from the DB (no history table).
+
+## No simulation / no fabricated numbers (since 2026-11-04)
+User: "sistem ini sudah dipakai oleh sekolah, data real… jgn ada lagi simulasi".
+Never add demo/simulator buttons, fake-success toasts/alerts, or hardcoded
+per-student/per-teacher numbers again. Removed in this pass:
+- `TeacherSelfSupervisionView`: all `[Simulasikan …]` / `[Simulasi Pemeriksa]`
+  buttons + handlers, and the `[Simulasi Guru]` teacher switcher (a logged-in
+  guru could open/edit ANY teacher's session). Now always `guruId`'s session;
+  App renders it only if `guruId` is in `teachersList`.
+- `teacher_report`: guru gets `teacherList` filtered to self + `guruId`.
+- `uploadRPPDocument` returns `success: false` when Storage isn't configured
+  or the upload fails (used to report success and save a fake/empty URL).
+  The local blob-URL cache is gone; `resolveRppFileUrl(rppUrl)` only.
+- Toast/alert-only buttons replaced with real actions (open RPP tab, go to
+  `teacher_report` for PDF) or removed (Rekap Excel, "verifikasi dinas",
+  "+ Tambah Dokumentasi").
+- Parent screens: `ParentPortfolioView` appended 6 fake subjects (IPAS 94 …)
+  to every student, fake narrative ("Ahmad adalah teladan…"), fake birth date,
+  fake radar %, fake recommendations, "Dapodik Terverifikasi" badges — all
+  replaced with real data or removed. `ParentCalendarView` header metrics and
+  per-habit compliance, `ParentDashboardView` attendance (98.4%) / academic
+  fallback (88.5), `StudentProgressDashboardView` 94.6% — now computed.
+- `HabitItem` lost `status/statusColor/targetNote/complianceRate` (were fixed
+  fake numbers). Per-habit compliance = `computeHabitStats(entries)` in
+  `src/lib/habitStats.ts`: only days with ≥1 habit ticked count (empty day =
+  not filled, not 0%). Portfolio uses last 30 days of `daily_habits` + today's
+  `murid.habits`; calendar uses the current month.
+- Wali kelas narrative in the portfolio = `murid.notes` ("Simpan Catatan").
+- Landing-page marketing percentages are still illustrative copy (not tied
+  to a student) — see "No sample people".
+
 ## RPP preview / open / download (since 2026-11-03) — `src/components/RppFileActions.tsx`
 - `<RppFileActions rppUrl rppFileName onUnavailable />` = 3 buttons: Pratinjau
   (modal + iframe), Buka di Tab Baru, Unduh. Used in `ObservationFormView`

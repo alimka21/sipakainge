@@ -232,8 +232,10 @@ export const StudentProgressDashboardView: React.FC<StudentProgressDashboardView
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
                 <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-md text-center">
                   <span className="text-xs text-teal-200">Kepatuhan 7 KAIH</span>
-                  <p className="text-2xl font-black text-white tabular-nums">94.6%</p>
-                  <span className="text-[10px] text-emerald-300">Amat Baik</span>
+                  <p className="text-2xl font-black text-white tabular-nums">
+                    {Math.round((Object.values(habitStatus || {}).filter(Boolean).length / 7) * 100)}%
+                  </p>
+                  <span className="text-[10px] text-emerald-300">Hari Ini</span>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-md text-center">
                   <span className="text-xs text-teal-200">Sholat 5 Waktu + Sunnah</span>

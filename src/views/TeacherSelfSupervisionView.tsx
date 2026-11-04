@@ -39,16 +39,10 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     }
   };
 
-  // Simulator Switcher - let testing users select which teacher they want to act as!
-  const [pickedTeacherId, setSelectedTeacherId] = useState<string>(guruId || teacherList[0]?.id || '');
-  // Never key the session by an id that isn't in the list (e.g. '' when the
-  // list was still loading) — that session could never be saved to the DB.
-  const selectedTeacherId = teacherList.some((t) => t.id === pickedTeacherId)
-    ? pickedTeacherId
-    : guruId && teacherList.some((t) => t.id === guruId)
-      ? guruId
-      : teacherList[0]?.id || '';
-  const teacher = teacherList.find((t) => t.id === selectedTeacherId) || teacherList[0];
+  // Selalu sesi milik guru yang login — guru tidak boleh membuka/mengubah sesi
+  // guru lain. App.tsx hanya merender layar ini bila `guruId` ada di daftar guru.
+  const selectedTeacherId = guruId && teacherList.some((t) => t.id === guruId) ? guruId : '';
+  const teacher = teacherList.find((t) => t.id === selectedTeacherId) as TeacherRecord;
 
   const [activeTab, setActiveTab] = useState<'stepper' | 'identitas' | 'modul' | 'refleksi' | 'hasil' | 'data_murid'>('stepper');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -145,7 +139,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   const [achievementCategory, setAchievementCategory] = useState<string>('Sekolah');
   const [achievementDesc, setAchievementDesc] = useState<string>('');
 
-  // Sync default values when active teacher / simulation changes
+  // Sync default values when the active teacher changes
   useEffect(() => {
     setSelectedRombel(teacher.rombel || '');
     const isMapel = teacher.subject && !teacher.subject.toLowerCase().includes('guru kelas') && !teacher.subject.toLowerCase().includes('tematik');
@@ -330,16 +324,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
     showToast('✓ Pengajuan jadwal supervisi berhasil dikirim! Status berubah menjadi DIAJUKAN.');
   };
 
-  const handleSimulateApproval = () => {
-    updateSession({ status: 'DISETUJUI' });
-    showToast('✓ [SIMULATOR] Jadwal disetujui Kepala Sekolah! Silakan upload RPP Anda.');
-  };
-
-  const handleSimulateRPPCheck = (status: 'DIPERIKSA' | 'PERLU_PERBAIKAN') => {
-    updateSession({ rppStatus: status });
-    showToast(`✓ [SIMULATOR] Status RPP diubah menjadi: ${status}`);
-  };
-
   const handleUploadRPP = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -354,9 +338,9 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           rppStatus: 'BELUM_DIPERIKSA',
           status: 'DOKUMEN_DIUPLOAD'
         });
-        showToast(res.message || '✓ Modul ajar/RPP berhasil diunggah! Berkas dalam antrean telaah.');
+        showToast('✓ Modul ajar/RPP berhasil diunggah! Berkas dalam antrean telaah.');
       } else {
-        showToast('❌ Gagal mengunggah berkas.');
+        showToast(res.message || '❌ Gagal mengunggah berkas.');
       }
     }
   };
@@ -425,7 +409,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
         </div>
       )}
 
-      {/* Top Breadcrumb Context & Simulation Dropdown */}
+      {/* Top Breadcrumb Context */}
       <div className="w-full bg-white px-6 lg:px-10 py-3 shadow-xs border-b border-slate-200/80">
         <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
@@ -438,26 +422,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
             <span className="text-slate-600">Tahun Ajaran {getAcademicPeriod().tahunAjaran}</span>
           </div>
 
-          {/* SIMULATION ZONE CARD */}
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200/80 p-1.5 rounded-2xl">
-            <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider pl-2 shrink-0">
-              [Simulasi Guru] :
-            </span>
-            <select
-              value={selectedTeacherId}
-              onChange={(e) => {
-                setSelectedTeacherId(e.target.value);
-                showToast(`Beralih ke sesi supervisi: ${teacherList.find(t => t.id === e.target.value)?.name}`);
-              }}
-              className="rounded-xl border border-amber-300 bg-white px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none"
-            >
-              {teacherList.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.rombel})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
@@ -657,14 +621,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                 <p className="text-xs text-amber-900 leading-relaxed">
                   Jadwal Anda telah dikirim dan berstatus <strong>DIAJUKAN</strong>. Saat ini Kepala Sekolah/Supervisor sedang memeriksa kecocokan tanggal pengamatan di kelas.
                 </p>
-                <div className="pt-2 border-t border-amber-200 flex gap-2">
-                  <button
-                    onClick={handleSimulateApproval}
-                    className="bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm"
-                  >
-                    [Simulasikan Persetujuan KS]
-                  </button>
-                </div>
               </div>
             )}
 
@@ -689,17 +645,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                 <p className="text-xs text-purple-900 leading-relaxed">
                   Berkas <strong>{activeSession.rppFileName}</strong> berhasil diserahkan ke sistem. Kepala Sekolah/Supervisor sedang melakukan verifikasi kelengkapan administrasi 17 komponen instrumen.
                 </p>
-                <div className="pt-2 border-t border-purple-200 flex gap-2">
-                  <button
-                    onClick={() => {
-                      updateSession({ status: 'PERANGKAT_DINILAI' });
-                      showToast('✓ [SIMULATOR] Status diubah ke PERANGKAT DINILAI!');
-                    }}
-                    className="bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm"
-                  >
-                    [Simulasikan Penilaian Selesai]
-                  </button>
-                </div>
               </div>
             )}
 
@@ -712,17 +657,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                 <p className="text-xs text-indigo-900 leading-relaxed">
                   Perencanaan pembelajaran Anda memperoleh skor <strong>{naScore} ({getPredicateStr(naScore)})</strong>. Saat ini Kepala Sekolah/Observer sedang melakukan kunjungan lapangan langsung di kelas untuk mengamati keselarasan KBM.
                 </p>
-                <div className="pt-2 border-t border-indigo-200 flex gap-2">
-                  <button
-                    onClick={() => {
-                      updateSession({ status: 'OBSERVASI_DILAKUKAN', obsNotes: 'Guru mengajar dengan baik dan menyenangkan...' });
-                      showToast('✓ [SIMULATOR] Observasi rampung! Lembar refleksi guru dibuka.');
-                    }}
-                    className="bg-indigo-800 hover:bg-indigo-900 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm"
-                  >
-                    [Simulasikan Observasi Selesai]
-                  </button>
-                </div>
               </div>
             )}
 
@@ -747,17 +681,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                 <p className="text-xs text-teal-900 leading-relaxed">
                   Refleksi Anda telah terkirim. Saat ini Kepala Sekolah sedang menyusun catatan penguatan, apresiasi pembelajaran, serta menentukan klasifikasi tindak lanjut.
                 </p>
-                <div className="pt-2 border-t border-teal-200 flex gap-2">
-                  <button
-                    onClick={() => {
-                      updateSession({ status: 'SELESAI', penguatanKS: 'Sangat baik dalam melibatkan murid aktif.', catatanKhususKS: 'Tidak ada.', rekomendasiKS: 'Pertahankan praktik ini.' });
-                      showToast('✓ [SIMULATOR] Seluruh siklus tuntas dan SELESAI!');
-                    }}
-                    className="bg-[#00685f] hover:bg-teal-900 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm"
-                  >
-                    [Simulasikan Penguatan Akhir & Tuntaskan Siklus]
-                  </button>
-                </div>
               </div>
             )}
 
@@ -1043,24 +966,6 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                     </span>
                   </div>
 
-                  {/* Simulator action helper */}
-                  {activeSession.status === 'DOKUMEN_DIUPLOAD' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400 font-bold">[Simulasi Pemeriksa]:</span>
-                      <button
-                        onClick={() => handleSimulateRPPCheck('DIPERIKSA')}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[11px] font-bold shadow-3xs"
-                      >
-                        Tandai Sesuai
-                      </button>
-                      <button
-                        onClick={() => handleSimulateRPPCheck('PERLU_PERBAIKAN')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded text-[11px] font-bold shadow-3xs"
-                      >
-                        Minta Revisi
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1370,7 +1275,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                   {activeSession.status === 'SELESAI' && (
                     <div className="flex justify-center pt-2">
                       <button
-                        onClick={() => alert('Mengunduh Rapor Resmi Hasil Supervisi Akademik Guru PDF...')}
+                        onClick={() => onNavigate('teacher_report')}
                         className="rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs py-2.5 px-6 hover:shadow transition inline-flex items-center gap-1.5 shadow-sm"
                       >
                         <span className="material-symbols-outlined text-sm">download</span>

@@ -494,21 +494,16 @@ export async function recordDailyHabit(
   return true;
 }
 
-/**
- * Salinan lokal (blob URL) dari RPP yang diunggah di tab ini, per nama berkas.
- * Dipakai untuk pratinjau/unduh bila berkas tidak sampai ke Storage (Supabase
- * belum diatur / bucket gagal). Hilang saat halaman dimuat ulang.
- */
-const localRppFiles = new Map<string, string>();
-
-/** URL yang bisa dibuka untuk RPP sesi ini: URL Storage bila ada, kalau tidak salinan lokal. */
-export function resolveRppFileUrl(rppUrl?: string, rppFileName?: string): string {
-  if (rppUrl && /^https?:\/\//.test(rppUrl) && !rppUrl.includes('mock-supabase-storage.local')) return rppUrl;
-  return (rppFileName && localRppFiles.get(rppFileName)) || '';
+/** URL Storage RPP sesi ini, atau '' bila berkasnya tidak pernah sampai ke Storage. */
+export function resolveRppFileUrl(rppUrl?: string): string {
+  return rppUrl && /^https?:\/\//.test(rppUrl) && !rppUrl.includes('mock-supabase-storage.local') ? rppUrl : '';
 }
 
 /**
- * Mengunggah dokumen RPP/Modul Ajar ke Supabase Storage (atau simulasi jika belum dikonfigurasi)
+ * Mengunggah dokumen RPP/Modul Ajar ke Supabase Storage (`rpp_bucket`).
+ * Gagal (success: false) bila Storage belum diatur atau unggahan ditolak —
+ * jangan pernah melaporkan "berhasil" untuk berkas yang tidak tersimpan,
+ * karena Kepala Sekolah lalu melihat nama berkas tanpa isi.
  */
 export async function uploadRPPDocument(file: File): Promise<{
   success: boolean;
@@ -520,59 +515,25 @@ export async function uploadRPPDocument(file: File): Promise<{
 }> {
   const dateStr = formatWitaShortDate();
   const sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-  if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
-    const prev = localRppFiles.get(file.name);
-    if (prev) URL.revokeObjectURL(prev);
-    localRppFiles.set(file.name, URL.createObjectURL(file));
+  const base = { name: file.name, size: sizeStr, date: dateStr };
+
+  if (!isSupabaseConfigured() || !supabase) {
+    return { ...base, success: false, message: '❌ Berkas tidak terunggah: koneksi database/Storage belum diatur.' };
   }
-
-  if (isSupabaseConfigured() && supabase) {
-    try {
-      const fileName = `rpp_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-      const { data, error } = await supabase.storage
-        .from('rpp_bucket')
-        .upload(fileName, file, { cacheControl: '3600', upsert: true });
-
-      if (error) {
-        console.warn('Storage upload error, trying mock fallback:', error);
-        return {
-          success: true,
-          url: '',
-          name: file.name,
-          size: sizeStr,
-          date: dateStr,
-          message: 'Terkoneksi Supabase, mengunggah dengan simulasi (pastikan storage bucket "rpp_bucket" telah dibuat di Supabase).'
-        };
-      }
-
-      const { data: publicUrlData } = supabase.storage.from('rpp_bucket').getPublicUrl(fileName);
-      return {
-        success: true,
-        url: publicUrlData.publicUrl,
-        name: file.name,
-        size: sizeStr,
-        date: dateStr,
-      };
-    } catch (err: any) {
-      return {
-        success: true,
-        url: '',
-        name: file.name,
-        size: sizeStr,
-        date: dateStr,
-        message: err.message || 'Error occurred during upload.'
-      };
+  try {
+    const fileName = `rpp_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    const { error } = await supabase.storage
+      .from('rpp_bucket')
+      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+    if (error) {
+      console.warn('Storage upload error:', error);
+      return { ...base, success: false, message: `❌ Berkas tidak terunggah: ${error.message}` };
     }
+    const { data: publicUrlData } = supabase.storage.from('rpp_bucket').getPublicUrl(fileName);
+    return { ...base, success: true, url: publicUrlData.publicUrl };
+  } catch (err: any) {
+    return { ...base, success: false, message: `❌ Berkas tidak terunggah: ${err?.message || 'koneksi gagal'}` };
   }
-
-  return {
-    success: true,
-    url: '',
-    name: file.name,
-    size: sizeStr,
-    date: dateStr,
-    message: 'Simulasi unggah berhasil (Koneksi Supabase belum diatur).'
-  };
 }
 
 
@@ -938,12 +899,49 @@ export async function getSupervisionSessions(): Promise<Record<string, Supervisi
   }
 }
 
-export async function upsertSupervisionSession(teacherId: string, session: SupervisionSession): Promise<SupabaseWriteResult> {
+/** Kolom DB untuk tiap field SupervisionSession (lihat sessionToRow). */
+const SESSION_FIELD_COLUMN: Partial<Record<keyof SupervisionSession, string>> = {
+  status: 'status', mapel: 'mapel', kelas: 'kelas', topik: 'topik', tujuan: 'tujuan',
+  tanggal: 'tanggal', jam: 'jam', lokasi: 'lokasi', supervisor: 'supervisor', catatanAwal: 'catatan_awal',
+  rppFileName: 'rpp_file_name', rppFileSize: 'rpp_file_size', rppUploadDate: 'rpp_upload_date',
+  rppUrl: 'rpp_url', rppStatus: 'rpp_status',
+  scores17: 'scores17', comments17: 'comments17', aspectStatus14: 'aspect_status14',
+  aspectFeedback14: 'aspect_feedback14', kelebihan15: 'kelebihan15', kekurangan16: 'kekurangan16',
+  rekomendasi17: 'rekomendasi17', obsTimerSeconds: 'obs_timer_seconds', obsNotes: 'obs_notes',
+  reflection1: 'reflection1', reflection2: 'reflection2', reflection3: 'reflection3',
+  reflection4: 'reflection4', reflection5: 'reflection5', reflection6: 'reflection6',
+  penguatanKS: 'penguatan_ks', catatanKhususKS: 'catatan_khusus_ks', rekomendasiKS: 'rekomendasi_ks',
+  tindakLanjutKS: 'tindak_lanjut_ks', scores22: 'scores22', comments22: 'comments22',
+  apresiasiObs: 'apresiasi_obs', temuanObs: 'temuan_obs', kesimpulanObs: 'kesimpulan_obs',
+  komitmenGuruNew: 'komitmen_guru',
+};
+
+/**
+ * Simpan sesi supervisi. Dengan `fields`, hanya kolom field tersebut yang
+ * ditulis — wajib dipakai dari layar input. Menulis seluruh baris membuat
+ * perangkat yang memuat sesi lebih dulu (mis. HP guru saat mengisi refleksi)
+ * menimpa nilai yang diisi Kepala Sekolah di perangkat lain dengan salinan
+ * lamanya (kasus nilai observasi hilang, 2026-11-04).
+ */
+export async function upsertSupervisionSession(
+  teacherId: string,
+  session: SupervisionSession,
+  fields?: (keyof SupervisionSession)[]
+): Promise<SupabaseWriteResult> {
   if (!isSupabaseConfigured() || !supabase) return { success: true };
+  const full = sessionToRow(teacherId, session) as Record<string, unknown>;
+  let row = full;
+  if (fields) {
+    row = { teacher_id: full.teacher_id, semester: full.semester };
+    fields.forEach((f) => {
+      const col = SESSION_FIELD_COLUMN[f];
+      if (col) row[col] = full[col];
+    });
+  }
   try {
     const { error } = await supabase
       .from('supervision_sessions')
-      .upsert(sessionToRow(teacherId, session), { onConflict: 'teacher_id,semester' });
+      .upsert(row, { onConflict: 'teacher_id,semester' });
     return error ? { success: false, message: error.message } : { success: true };
   } catch (err) {
     return { success: false, message: err instanceof Error ? err.message : String(err) };

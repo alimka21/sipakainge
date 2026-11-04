@@ -5,6 +5,7 @@ import { DayHabitLog } from '../types';
 import { witaMonthDays, BULAN } from '../lib/time';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
 import { DailyHabitEntry, getDailyHabitLogs, saveDailyHabitLog } from '../lib/supabase';
+import { computeHabitStats, habitStatusLabel } from '../lib/habitStats';
 
 interface ParentCalendarViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -92,6 +93,15 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
       totalHabits: 7,
     };
   });
+
+  // Kepatuhan per kebiasaan bulan ini, dari jurnal yang benar-benar diisi.
+  const habitStats = computeHabitStats(Array.from({ length: monthInfo.today }, (_, i) => entryFor(i + 1)));
+  const isFilled = (d: number) => Object.values(entryFor(d)?.habits || {}).some(Boolean);
+  // Hari berturut-turut terisi sampai hari ini (hari ini boleh belum diisi).
+  let streak = 0;
+  for (let d = isFilled(monthInfo.today) ? monthInfo.today : monthInfo.today - 1; d >= 1 && isFilled(d); d--) streak++;
+  const lengkapDays = daysData.filter((d) => d.habitsDone === 7).length;
+  const kategori = (pct: number) => (pct >= 90 ? 'Amat Baik' : pct >= 80 ? 'Baik' : pct >= 70 ? 'Cukup' : 'Perlu Pendampingan');
 
   const selectedEntry = entryFor(selectedDay) || blankEntry();
   const dayChecklist = selectedEntry.habits;
@@ -306,8 +316,8 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                   <span className="material-symbols-outlined text-base">local_fire_department</span>
                   Streak
                 </div>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">18 Hari</p>
-                <p className="text-[11px] text-teal-200/80">Tanpa Terputus</p>
+                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{streak} Hari</p>
+                <p className="text-[11px] text-teal-200/80">Berturut-turut Terisi</p>
               </div>
 
               <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md ring-1 ring-white/10 text-center">
@@ -315,8 +325,8 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                   <span className="material-symbols-outlined text-base">verified</span>
                   Kepatuhan
                 </div>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">94.6%</p>
-                <p className="text-[11px] text-teal-200/80">Kategori Amat Baik</p>
+                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{habitStats.overall === null ? '—' : `${habitStats.overall}%`}</p>
+                <p className="text-[11px] text-teal-200/80">{habitStats.overall === null ? 'Belum ada jurnal' : `Kategori ${kategori(habitStats.overall)}`}</p>
               </div>
 
               <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md ring-1 ring-white/10 text-center">
@@ -324,17 +334,17 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                   <span className="material-symbols-outlined text-base">calendar_check</span>
                   Terisi
                 </div>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">24 / 25</p>
+                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{habitStats.days} / {monthInfo.today}</p>
                 <p className="text-[11px] text-teal-200/80">Hari Bulan Ini</p>
               </div>
 
               <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md ring-1 ring-white/10 text-center">
                 <div className="flex items-center justify-center gap-1 text-purple-300 text-xs font-medium">
-                  <span className="material-symbols-outlined text-base">chat</span>
-                  Apresiasi
+                  <span className="material-symbols-outlined text-base">task_alt</span>
+                  Lengkap
                 </div>
-                <p className="mt-1 text-2xl font-bold text-white tabular-nums">6 Guru</p>
-                <p className="text-[11px] text-teal-200/80">Catatan Positif</p>
+                <p className="mt-1 text-2xl font-bold text-white tabular-nums">{lengkapDays} Hari</p>
+                <p className="text-[11px] text-teal-200/80">7 dari 7 Kebiasaan</p>
               </div>
             </div>
           </div>
@@ -551,7 +561,7 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                 Analisis Kepatuhan Masing-Masing dari 7 Kebiasaan Anak Indonesia Hebat (7 KAIH)
               </h3>
               <p className="mt-1 text-xs text-slate-500">
-                Berdasarkan rekap harian oleh Orang Tua dan verifikasi tim Guru Kelas IV-A
+                Berdasarkan jurnal harian bulan ini yang diisi orang tua dan divalidasi wali kelas {activeMurid?.rombel || ''} ({habitStats.days} hari terisi)
               </p>
 
               <div className="mt-5 space-y-3.5">
@@ -573,30 +583,30 @@ export const ParentCalendarView: React.FC<ParentCalendarViewProps> = ({
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                       <div className="w-24 sm:w-28 text-right">
                         <span className="text-xs font-bold text-slate-800 tabular-nums">
-                          {h.complianceRate}%
+                          {habitStats.perHabit[h.id].pct === null ? '—' : `${habitStats.perHabit[h.id].pct}%`}
                         </span>
                         <div className="mt-1 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              h.complianceRate >= 90
+                              (habitStats.perHabit[h.id].pct ?? 0) >= 90
                                 ? 'bg-emerald-500'
-                                : h.complianceRate >= 80
+                                : (habitStats.perHabit[h.id].pct ?? 0) >= 80
                                 ? 'bg-teal-500'
                                 : 'bg-amber-500'
                             }`}
-                            style={{ width: `${h.complianceRate}%` }}
+                            style={{ width: `${habitStats.perHabit[h.id].pct ?? 0}%` }}
                           ></div>
                         </div>
                       </div>
 
                       <span
                         className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-bold ${
-                          h.status === 'Sangat Konsisten' || h.status === 'Konsisten' || h.status === 'Sangat Baik'
+                          (habitStats.perHabit[h.id].pct ?? 0) >= 75
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {h.status}
+                        {habitStatusLabel(habitStats.perHabit[h.id].pct)}
                       </span>
                     </div>
                   </div>

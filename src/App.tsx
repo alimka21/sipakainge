@@ -163,16 +163,34 @@ export default function App() {
   const sessionStatesRef = useRef(sessionStates);
   sessionStatesRef.current = sessionStates;
   // Form supervisi menulis per ketikan — tunda penulisan ke DB sampai pengguna
-  // berhenti mengetik sebentar, satu timer per guru.
+  // berhenti mengetik sebentar, satu timer per guru. Yang ditulis hanya field
+  // yang diubah di tab ini (`dirty`), bukan seluruh baris: sesi yang sama
+  // diisi dari dua perangkat (KS menilai, guru merefleksi), dan menulis
+  // seluruh baris membuat salinan lama di satu perangkat menghapus isian
+  // perangkat lain.
   const sessionSaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const sessionDirty = useRef<Record<string, Set<keyof SupervisionSession>>>({});
+  const sessionInFlight = useRef<Record<string, Set<keyof SupervisionSession>>>({});
+  const saveSessionFields = async (teacherId: string) => {
+    const session = sessionStatesRef.current[teacherId];
+    const fields = [...(sessionDirty.current[teacherId] || [])];
+    delete sessionDirty.current[teacherId];
+    if (!session || fields.length === 0) return;
+    const inFlight = (sessionInFlight.current[teacherId] ||= new Set());
+    fields.forEach((f) => inFlight.add(f));
+    const res = await upsertSupervisionSession(teacherId, session, fields);
+    fields.forEach((f) => inFlight.delete(f));
+    if (!res.success) {
+      const dirty = (sessionDirty.current[teacherId] ||= new Set());
+      fields.forEach((f) => dirty.add(f));
+      reportSyncFailure('Sesi supervisi', res.message);
+    }
+  };
   const scheduleSessionSave = (teacherId: string) => {
     clearTimeout(sessionSaveTimers.current[teacherId]);
-    sessionSaveTimers.current[teacherId] = setTimeout(async () => {
+    sessionSaveTimers.current[teacherId] = setTimeout(() => {
       delete sessionSaveTimers.current[teacherId];
-      const session = sessionStatesRef.current[teacherId];
-      if (!session) return;
-      const res = await upsertSupervisionSession(teacherId, session);
-      if (!res.success) reportSyncFailure('Sesi supervisi', res.message);
+      saveSessionFields(teacherId);
     }, 800);
   };
 
@@ -185,7 +203,18 @@ export default function App() {
     sessionStatesRef.current = next;
     setSessionStates(next);
     Object.keys(next).forEach((teacherId) => {
-      if (next[teacherId] !== prev[teacherId]) scheduleSessionSave(teacherId);
+      const before = prev[teacherId];
+      const after = next[teacherId];
+      if (after === before) return;
+      const changed = (Object.keys({ ...before, ...after }) as (keyof SupervisionSession)[]).filter(
+        (k) => JSON.stringify(before?.[k]) !== JSON.stringify(after[k])
+      );
+      // Sesi baru: tulis semua field yang terisi, supaya barisnya lengkap.
+      if (!before) changed.push(...(Object.keys(after) as (keyof SupervisionSession)[]));
+      if (changed.length === 0) return;
+      const dirty = (sessionDirty.current[teacherId] ||= new Set());
+      changed.forEach((k) => dirty.add(k));
+      scheduleSessionSave(teacherId);
     });
   };
 
@@ -194,13 +223,48 @@ export default function App() {
     const flush = () => {
       Object.keys(sessionSaveTimers.current).forEach((teacherId) => {
         clearTimeout(sessionSaveTimers.current[teacherId]);
-        const session = sessionStatesRef.current[teacherId];
-        if (session) upsertSupervisionSession(teacherId, session);
+        saveSessionFields(teacherId);
       });
       sessionSaveTimers.current = {};
     };
     window.addEventListener('pagehide', flush);
     return () => window.removeEventListener('pagehide', flush);
+  }, []);
+
+  // Ambil ulang sesi dari DB saat tab aktif lagi dan tiap menit, supaya isian
+  // dari perangkat lain (nilai KS, refleksi guru) ikut tampil. Field yang
+  // sedang diubah / sedang disimpan di tab ini tidak ditimpa.
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const remote = await getSupervisionSessions();
+      if (!remote) return;
+      setSessionStates((prev) => {
+        const merged = { ...prev };
+        Object.entries(remote).forEach(([teacherId, remoteSession]) => {
+          const local = prev[teacherId];
+          const keep = new Set([
+            ...(sessionDirty.current[teacherId] || []),
+            ...(sessionInFlight.current[teacherId] || []),
+          ]);
+          const next = { ...local, ...remoteSession } as SupervisionSession;
+          keep.forEach((k) => {
+            if (local) (next as any)[k] = local[k];
+          });
+          if (local && JSON.stringify(local) === JSON.stringify(next)) return;
+          merged[teacherId] = next;
+        });
+        sessionStatesRef.current = merged;
+        return merged;
+      });
+    };
+    const id = setInterval(refresh, 60 * 1000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, []);
 
   /**
@@ -625,7 +689,7 @@ export default function App() {
 
               {/* 2c. Supervisi Klinis Saya (Halaman Guru yang Diobservasi) */}
               {currentScreen === 'teacher_my_supervision' &&
-                (teachersList.length > 0 ? (
+                (teachersList.some((t) => t.id === guruId) ? (
                   <TeacherSelfSupervisionView
                     onNavigate={handleNavigate}
                     sessionStates={sessionStates}
@@ -676,9 +740,10 @@ export default function App() {
               {currentScreen === 'teacher_report' && (
                 <TeacherSupervisionReportView
                   onNavigate={handleNavigate}
-                  teacherList={teachersList}
+                  // Guru hanya boleh melihat rapornya sendiri.
+                  teacherList={userRole === 'guru' ? teachersList.filter((t) => t.id === guruId) : teachersList}
                   sessionStates={sessionStates}
-                  selectedTeacherId={selectedTeacherId}
+                  selectedTeacherId={userRole === 'guru' ? guruId : selectedTeacherId}
                   onSelectTeacherId={setSelectedTeacherId}
                 />
               )}

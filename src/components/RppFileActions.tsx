@@ -11,34 +11,34 @@ const isPdf = (name: string) => /\.pdf$/i.test(name);
 const isWord = (name: string) => /\.docx?$/i.test(name);
 
 /** URL untuk ditampilkan di browser. Word (.doc/.docx) tidak bisa dirender browser,
- *  jadi berkas di Storage dibuka lewat Office Online viewer; salinan lokal (blob) tidak bisa. */
+ *  jadi dibuka lewat Office Online viewer. */
 function viewerUrl(url: string, name: string): string {
-  if (isWord(name) && /^https?:\/\//.test(url)) {
+  if (isWord(name)) {
     return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
   }
   return url;
 }
 
 export function canPreviewRpp(rppUrl?: string, rppFileName?: string): boolean {
-  const url = resolveRppFileUrl(rppUrl, rppFileName);
+  const url = resolveRppFileUrl(rppUrl);
   if (!url || !rppFileName) return false;
-  return isPdf(rppFileName) || (isWord(rppFileName) && /^https?:\/\//.test(url));
+  return isPdf(rppFileName) || isWord(rppFileName);
 }
 
 export function openRppInNewTab(rppUrl?: string, rppFileName?: string): boolean {
-  const url = resolveRppFileUrl(rppUrl, rppFileName);
+  const url = resolveRppFileUrl(rppUrl);
   if (!url || !rppFileName) return false;
   window.open(viewerUrl(url, rppFileName), '_blank', 'noopener,noreferrer');
   return true;
 }
 
 export function downloadRpp(rppUrl?: string, rppFileName?: string): boolean {
-  const url = resolveRppFileUrl(rppUrl, rppFileName);
+  const url = resolveRppFileUrl(rppUrl);
   if (!url || !rppFileName) return false;
   const a = document.createElement('a');
   // Atribut `download` diabaikan untuk URL lintas domain; Supabase Storage
   // memaksa unduhan lewat parameter `?download=<nama>`.
-  a.href = url.startsWith('blob:') ? url : `${url}${url.includes('?') ? '&' : '?'}download=${encodeURIComponent(rppFileName)}`;
+  a.href = `${url}${url.includes('?') ? '&' : '?'}download=${encodeURIComponent(rppFileName)}`;
   a.download = rppFileName;
   a.rel = 'noopener';
   document.body.appendChild(a);
@@ -48,7 +48,7 @@ export function downloadRpp(rppUrl?: string, rppFileName?: string): boolean {
 }
 
 export const RPP_UNAVAILABLE_MESSAGE =
-  'Berkas RPP belum tersimpan di Storage (Supabase/rpp_bucket), jadi isinya tidak bisa dibuka dari perangkat ini. Minta guru mengunggah ulang setelah Storage aktif.';
+  'Berkas RPP ini tidak tersimpan di Storage (rpp_bucket), jadi isinya tidak bisa dibuka. Minta guru mengunggah ulang.';
 
 interface RppFileActionsProps {
   rppUrl?: string;
@@ -62,14 +62,14 @@ const RppFileActions: React.FC<RppFileActionsProps> = ({ rppUrl, rppFileName, on
   const [showPreview, setShowPreview] = useState(false);
   if (!rppFileName) return null;
 
-  const url = resolveRppFileUrl(rppUrl, rppFileName);
+  const url = resolveRppFileUrl(rppUrl);
   const available = !!url;
   const previewable = canPreviewRpp(rppUrl, rppFileName);
   const notify = onUnavailable || ((m: string) => alert(m));
 
   const handlePreview = () => {
     if (!available) return notify(RPP_UNAVAILABLE_MESSAGE);
-    if (!previewable) return notify('Pratinjau berkas Word hanya tersedia setelah tersimpan di Storage. Silakan unduh berkasnya.');
+    if (!previewable) return notify('Pratinjau tidak tersedia untuk jenis berkas ini. Silakan unduh berkasnya.');
     setShowPreview(true);
   };
   const handleOpenTab = () => {

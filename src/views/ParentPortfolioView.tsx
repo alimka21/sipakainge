@@ -1,8 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, MuridRecord, RombelRecord, TeacherRecord } from '../types';
 import { HABIT_LIST, INITIAL_MURID, INITIAL_ROMBEL, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { getGuruClass, getVisibleMurid, getWaliKelasName } from '../lib/access';
-import { formatWitaDateTime, getAcademicPeriod } from '../lib/time';
+import { formatWitaDateTime, getAcademicPeriod, now, witaDateKey } from '../lib/time';
+import { DailyHabitEntry, getDailyHabitLogs } from '../lib/supabase';
+import { computeHabitStats, habitStatusLabel } from '../lib/habitStats';
+
+const FASE_LABEL: Record<string, string> = { 'fase-a': 'Fase A', 'fase-b': 'Fase B', 'fase-c': 'Fase C' };
+// Titik terluar heptagon radar (urutan = HABIT_LIST), pusat di (160, 160).
+const RADAR_VERTICES: [number, number][] = [[160, 30], [270, 75], [295, 190], [220, 285], [100, 285], [25, 190], [50, 75]];
+const RADAR_LABELS: { x: number; y: number; anchor: 'start' | 'middle' | 'end'; name: string }[] = [
+  { x: 160, y: 20, anchor: 'middle', name: 'Bangun Pagi' },
+  { x: 280, y: 70, anchor: 'start', name: 'Beribadah' },
+  { x: 305, y: 195, anchor: 'start', name: 'Olahraga' },
+  { x: 225, y: 305, anchor: 'middle', name: 'Makan Sehat' },
+  { x: 95, y: 305, anchor: 'middle', name: 'Gemar Membaca' },
+  { x: 15, y: 195, anchor: 'end', name: 'Santun & Membantu' },
+  { x: 35, y: 70, anchor: 'end', name: 'Tidur Tepat' },
+];
+
+const formatTanggalLahir = (value?: string) => {
+  if (!value) return '—';
+  const d = new Date(`${value}T00:00:00`);
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+};
 
 interface ParentPortfolioViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -59,62 +80,12 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
           score: s,
           predicate: pred,
           desc: `Evaluasi Kompetensi Mandiri: ${ac.tasks.map((tk: any) => `${tk.taskName} (Nilai: ${tk.score})`).join(', ')}.`,
-          trend: 'Live • Input Guru',
+          trend: 'Input Guru',
         };
       })
     : [];
 
-  const academicSubjects = [
-    ...activeAcademics,
-    {
-      code: 'IPAS',
-      name: 'Ilmu Pengetahuan Alam & Sosial',
-      score: 94,
-      predicate: 'Amat Baik',
-      desc: 'Sangat menguasai pemahaman ekosistem, rantai makanan, fotosintesis, serta berinisiatif aktif saat observasi lingkungan sekolah.',
-      trend: '+4 poin dari STS',
-    },
-    {
-      code: 'BIN',
-      name: 'Bahasa Indonesia',
-      score: 90,
-      predicate: 'Amat Baik',
-      desc: 'Mampu menyusun teks laporan observasi dengan runtut, artikulatif, dan kaya kosakata kearifan lokal.',
-      trend: '+2 poin',
-    },
-    {
-      code: 'MTK',
-      name: 'Matematika Operasional',
-      score: 88,
-      predicate: 'Baik',
-      desc: 'Memahami konsep pecahan senilai dan operasi hitung dasar desimal. Perlu sedikit latihan ketelitian soal cerita bertingkat.',
-      trend: '+5 poin',
-    },
-    {
-      code: 'PPKN',
-      name: 'Pendidikan Pancasila',
-      score: 96,
-      predicate: 'Amat Baik',
-      desc: 'Menjadi teladan dalam musyawarah kelas, menghargai keberagaman, dan aktif bergotong royong.',
-      trend: '+1 poin',
-    },
-    {
-      code: 'SBdP',
-      name: 'Seni Rupa & Prakarya',
-      score: 92,
-      predicate: 'Amat Baik',
-      desc: 'Kreatif memvisualisasikan kampanye lingkungan, pemilihan warna harmonis dan kerapian detail sangat tinggi.',
-      trend: '+3 poin',
-    },
-    {
-      code: 'PJOK',
-      name: 'Pendidikan Jasmani & Kesehatan',
-      score: 86,
-      predicate: 'Baik',
-      desc: 'Kebugaran fisik prima, sportivitas tim tinggi. Didorong untuk konsisten berolahraga teratur di hari libur.',
-      trend: 'Stabil',
-    },
-  ];
+  const academicSubjects = activeAcademics;
 
   // Artifacts (Dynamic Merger)
   const activeArtifacts = (activeMurid && (activeMurid as any).portfolios)
@@ -145,6 +116,39 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
     : [];
 
   const awards = activeAwards;
+
+  const rerataNilai = academicSubjects.length
+    ? Math.round((academicSubjects.reduce((sum: number, sub: any) => sum + Number(sub.score || 0), 0) / academicSubjects.length) * 10) / 10
+    : null;
+  const predikatNilai = (n: number) => (n >= 90 ? 'Amat Baik (A)' : n >= 80 ? 'Baik (B)' : n >= 70 ? 'Cukup (C)' : 'Perlu Pendampingan (D)');
+  const nilaiTertinggi = academicSubjects.reduce<any>((best, sub: any) => (!best || sub.score > best.score ? sub : best), null);
+
+  // Kepatuhan 7 KAIH 30 hari terakhir dari jurnal harian (daily_habits);
+  // hari ini diambil dari data murid yang sedang dimuat (paling baru).
+  const [habitLogs, setHabitLogs] = useState<Record<string, DailyHabitEntry>>({});
+  useEffect(() => {
+    if (!activeMurid) return;
+    let cancelled = false;
+    setHabitLogs({});
+    const from = witaDateKey(new Date(now().getTime() - 29 * 24 * 60 * 60 * 1000));
+    getDailyHabitLogs(activeMurid.id, from, witaDateKey()).then((logs) => {
+      if (!cancelled) setHabitLogs(logs);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMurid?.id]);
+  const habitEntries = { ...habitLogs, ...(activeMurid ? { [witaDateKey()]: { habits: activeMurid.habits || {} } } : {}) };
+  const habitStats = computeHabitStats(Object.values(habitEntries));
+  const radarPoints = HABIT_LIST.map((h, i) => {
+    const p = (habitStats.perHabit[h.id].pct ?? 0) / 100;
+    const [vx, vy] = RADAR_VERTICES[i];
+    return [160 + (vx - 160) * p, 160 + (vy - 160) * p] as [number, number];
+  });
+  const topHabits = HABIT_LIST.map((h, i) => ({ name: RADAR_LABELS[i].name, pct: habitStats.perHabit[h.id].pct ?? 0 }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 2);
 
 
   return (
@@ -278,21 +282,12 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                         </span>
                       </div>
                     )}
-                    <span
-                      className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md ring-2 ring-white"
-                      title="Terverifikasi Dapodik"
-                    >
-                      <span className="material-symbols-outlined text-lg">verified</span>
-                    </span>
                   </div>
 
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800 ring-1 ring-teal-600/20">
-                        {activeMurid.rombel} • {activeMurid.fase === 'fase-c' ? 'Fase C' : 'Fase B'}
-                      </span>
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-600/20">
-                        Dapodik Terverifikasi RI
+                        {activeMurid.rombel}{FASE_LABEL[activeMurid.fase] ? ` • ${FASE_LABEL[activeMurid.fase]}` : ''}
                       </span>
                       <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
                         Tahun Ajaran {getAcademicPeriod().tahunAjaran}
@@ -309,10 +304,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                         <span className="font-bold text-slate-700">{activeMurid.nisn} / {activeMurid.nis}</span>
                       </div>
                       <div>
-                        <span className="font-semibold text-slate-400 block">Tempat, Tgl Lahir:</span>
-                        <span className="font-bold text-slate-700">
-                          {activeMurid.id === 'm-4a-2' ? 'Makassar, 22 April 2015' : 'Makassar, 14 Mei 2015'}
-                        </span>
+                        <span className="font-semibold text-slate-400 block">Tanggal Lahir:</span>
+                        <span className="font-bold text-slate-700">{formatTanggalLahir(activeMurid.tanggalLahir)}</span>
                       </div>
                       <div>
                         <span className="font-semibold text-slate-400 block">Wali Kelas:</span>
@@ -332,21 +325,21 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                 <div className="flex flex-row lg:flex-col gap-3 shrink-0">
                   <div className="flex items-center gap-3 rounded-2xl bg-teal-50/70 p-3.5 ring-1 ring-teal-600/10">
                     <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-teal-700 px-2 text-sm font-bold text-white whitespace-nowrap">
-                      {activeMurid.id === 'm-4a-2' ? '94.8' : '92.2'}
+                      {rerataNilai ?? '—'}
                     </div>
                     <div>
                       <p className="text-xs font-bold text-teal-900">Rerata Nilai Rapor</p>
-                      <p className="text-[11px] text-teal-700">Predikat: Amat Baik (A)</p>
+                      <p className="text-[11px] text-teal-700">{rerataNilai === null ? 'Belum ada nilai' : `Predikat: ${predikatNilai(rerataNilai)}`}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3.5 ring-1 ring-emerald-600/10">
                     <div className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-emerald-700 px-2 text-sm font-bold text-white whitespace-nowrap">
-                      {activeMurid.id === 'm-4a-2' ? '100%' : '94.6%'}
+                      {habitStats.overall === null ? '—' : `${habitStats.overall}%`}
                     </div>
                     <div>
                       <p className="text-xs font-bold text-emerald-900">7 KAIH Anak</p>
-                      <p className="text-[11px] text-emerald-700">Tingkat Konsistensi</p>
+                      <p className="text-[11px] text-emerald-700">{habitStats.days ? `Konsistensi ${habitStats.days} hari tercatat` : 'Belum ada jurnal'}</p>
                     </div>
                   </div>
                 </div>
@@ -363,11 +356,7 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                     {getWaliKelasName(activeMurid.rombel, rombelList, teacherList)}):
                   </p>
                   <p className="italic leading-relaxed text-slate-600">
-                    {activeMurid.id === 'm-4a-2' ? (
-                      `"Andi Siti Nurhaliza menunjukkan minat yang sangat kuat pada bidang sosial dan bahasa. Ia sangat disiplin, sopan (menerapkan nilai Sipakatau), dan selalu menyelesaikan seluruh pembiasaan karakter dengan konsisten baik di rumah maupun di sekolah."`
-                    ) : (
-                      `"Ahmad adalah teladan dalam rasa ingin tahu dan keberanian bereksplorasi sains. Ia memiliki kecerdasan sosial yang tinggi dalam memimpin diskusi kelompok, berempati terhadap teman sebaya, serta menunjukkan kedisiplinan beribadah dan gemar membaca yang sangat konsisten baik di kelas maupun di rumah."`
-                    )}
+                    {activeMurid.notes ? `"${activeMurid.notes}"` : 'Belum ada catatan dari wali kelas.'}
                   </p>
                 </div>
               </div>
@@ -399,8 +388,8 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
 
         {/* Tab 1: Radar Karakter & Ringkasan Holistik */}
         <div className={`mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12 print:block print:space-y-4 print:break-inside-avoid ${activeTab === 'radar' ? '' : 'hidden print:grid'}`}>
-            {/* Left: SVG Radar Heptagon (7 Sisi) */}
-            <div className="lg:col-span-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
+            {/* SVG Radar Heptagon (7 Sisi) */}
+            <div className="lg:col-span-12 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -408,11 +397,11 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                     Heptagon Radar 7 KAIH
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Visualisasi keseimbangan karakter berdasarkan pembiasaan 30 hari terakhir
+                    Dihitung dari jurnal pembiasaan 30 hari terakhir ({habitStats.days} hari terisi)
                   </p>
                 </div>
                 <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">
-                  Rerata 92%
+                  {habitStats.overall === null ? 'Belum ada data' : `Rerata ${habitStats.overall}%`}
                 </span>
               </div>
 
@@ -444,102 +433,49 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                   <line x1="160" y1="160" x2="50" y2="75" stroke="#cbd5e1" strokeWidth="1" />
 
                   {/* Filled Performance Polygon */}
-                  <polygon
-                    points="160,42 265,82 280,188 205,270 108,272 38,188 56,80"
-                    fill="rgba(13, 148, 136, 0.25)"
-                    stroke="#0f766e"
-                    strokeWidth="3"
-                  />
+                  {habitStats.days > 0 && (
+                    <polygon
+                      points={radarPoints.map(([x, y]) => `${x},${y}`).join(' ')}
+                      fill="rgba(13, 148, 136, 0.25)"
+                      stroke="#0f766e"
+                      strokeWidth="3"
+                    />
+                  )}
 
                   {/* Data points */}
-                  <circle cx="160" cy="42" r="5" fill="#0f766e" />
-                  <circle cx="265" cy="82" r="5" fill="#0f766e" />
-                  <circle cx="280" cy="188" r="5" fill="#0f766e" />
-                  <circle cx="205" cy="270" r="5" fill="#0f766e" />
-                  <circle cx="108" cy="272" r="5" fill="#0f766e" />
-                  <circle cx="38" cy="188" r="5" fill="#0f766e" />
-                  <circle cx="56" cy="80" r="5" fill="#0f766e" />
+                  {habitStats.days > 0 && radarPoints.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="5" fill="#0f766e" />)}
 
                   {/* Labels */}
-                  <text x="160" y="20" textAnchor="middle" className="text-[10px] font-bold fill-slate-700">
-                    1. Bangun Pagi (96%)
-                  </text>
-                  <text x="280" y="70" textAnchor="start" className="text-[10px] font-bold fill-slate-700">
-                    2. Beribadah (98%)
-                  </text>
-                  <text x="305" y="195" textAnchor="start" className="text-[10px] font-bold fill-amber-700">
-                    3. Olahraga (75%)
-                  </text>
-                  <text x="225" y="305" textAnchor="middle" className="text-[10px] font-bold fill-slate-700">
-                    4. Makan Sehat (91%)
-                  </text>
-                  <text x="95" y="305" textAnchor="middle" className="text-[10px] font-bold fill-slate-700">
-                    5. Gemar Membaca (88%)
-                  </text>
-                  <text x="15" y="195" textAnchor="end" className="text-[10px] font-bold fill-slate-700">
-                    6. Santun & Membantu (94%)
-                  </text>
-                  <text x="35" y="70" textAnchor="end" className="text-[10px] font-bold fill-amber-700">
-                    7. Tidur Tepat (72%)
-                  </text>
+                  {HABIT_LIST.map((h, i) => {
+                    const pct = habitStats.perHabit[h.id].pct;
+                    const l = RADAR_LABELS[i];
+                    return (
+                      <text
+                        key={h.id}
+                        x={l.x}
+                        y={l.y}
+                        textAnchor={l.anchor}
+                        className={`text-[10px] font-bold ${pct !== null && pct < 75 ? 'fill-amber-700' : 'fill-slate-700'}`}
+                      >
+                        {i + 1}. {l.name} ({pct === null ? '—' : `${pct}%`})
+                      </text>
+                    );
+                  })}
                 </svg>
 
                 <p className="mt-4 text-center text-xs text-slate-500">
-                  Nilai tertinggi pada aspek <span className="font-bold text-teal-800">Beribadah (98%)</span> dan{' '}
-                  <span className="font-bold text-teal-800">Bangun Pagi (96%)</span>.
+                  {habitStats.days === 0 ? (
+                    'Belum ada jurnal 7 KAIH yang diisi dalam 30 hari terakhir.'
+                  ) : (
+                    <>
+                      Nilai tertinggi pada aspek <span className="font-bold text-teal-800">{topHabits[0].name} ({topHabits[0].pct}%)</span> dan{' '}
+                      <span className="font-bold text-teal-800">{topHabits[1].name} ({topHabits[1].pct}%)</span>.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
 
-            {/* Right: Dimension Breakdown & Recommendations */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-teal-700">lightbulb</span>
-                  Rekomendasi Kolaborasi Rumah & Sekolah
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Disusun oleh Guru Kelas & Guru BK untuk mengoptimalkan potensi anak
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
-                    <div className="flex items-center gap-2 text-teal-900">
-                      <span className="material-symbols-outlined text-lg">check_circle</span>
-                      <h4 className="text-xs font-bold">Kekuatan Utama yang Perlu Diapresiasi</h4>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                      Kemandirian ibadah dan kebiasaan membaca sangat membanggakan. Pertahankan dengan
-                      memberi akses pada buku ensiklopedia tingkat lanjutan dan ajak Ahmad bercerita
-                      kembali saat makan malam.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
-                    <div className="flex items-center gap-2 text-amber-900">
-                      <span className="material-symbols-outlined text-lg">flag</span>
-                      <h4 className="text-xs font-bold">Area Pendampingan Bersama</h4>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                      Jam tidur malam masih sering melampaui pukul 21.30 WITA akibat keasyikan membaca.
-                      Disarankan menerapkan alarm "Gawai & Lampu Mati" pada 20.45 WITA agar durasi tidur
-                      tetap minimal 8 jam untuk regenerasi fisik dan fokus belajar pagi.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-                    <div className="flex items-center gap-2 text-blue-900">
-                      <span className="material-symbols-outlined text-lg">nature_people</span>
-                      <h4 className="text-xs font-bold">Rencana Aktivitas Akhir Pekan</h4>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                      Jalan santai bersama di Pantai Losari atau CFD Sudirman untuk mendongkrak capaian
-                      kebiasaan #3 (Olahraga & Aktivitas Fisik) dari 75% menjadi 90%.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
         {/* Tab 2: Detail 7 Kebiasaan */}
@@ -583,12 +519,12 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                         </div>
                         <span
                           className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
-                            habit.complianceRate >= 90
+                            (habitStats.perHabit[habit.id].pct ?? 0) >= 90
                               ? 'bg-emerald-100 text-emerald-800'
                               : 'bg-amber-100 text-amber-800'
                           }`}
                         >
-                          {habit.complianceRate}%
+                          {habitStats.perHabit[habit.id].pct === null ? '—' : `${habitStats.perHabit[habit.id].pct}%`}
                         </span>
                       </div>
 
@@ -599,7 +535,10 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
 
                     <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs">
                       <span className="text-slate-500">Status Capaian:</span>
-                      <span className="font-bold text-teal-900">{habit.targetNote}</span>
+                      <span className="font-bold text-teal-900">
+                        {habitStatusLabel(habitStats.perHabit[habit.id].pct)}
+                        {habitStats.days > 0 && ` • ${habitStats.perHabit[habit.id].done}/${habitStats.days} hari`}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -620,16 +559,23 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-xl bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-800">
-                    Nilai Tertinggi: 96 (Pendidikan Pancasila)
-                  </span>
+                  {nilaiTertinggi && (
+                    <span className="rounded-xl bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-800">
+                      Nilai Tertinggi: {nilaiTertinggi.score} ({nilaiTertinggi.name})
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="mt-5 space-y-4">
-                {academicSubjects.map((sub) => (
+                {academicSubjects.length === 0 && (
+                  <p className="text-center p-6 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400 italic">
+                    Belum ada nilai akademik yang diinput guru untuk ananda.
+                  </p>
+                )}
+                {academicSubjects.map((sub: any) => (
                   <div
-                    key={sub.code}
+                    key={sub.name}
                     className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 hover:bg-slate-50 transition"
                   >
                     <div className="flex-1">
@@ -670,15 +616,9 @@ export const ParentPortfolioView: React.FC<ParentPortfolioViewProps> = ({
                     Galeri Karya & Praktik Baik Murid
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Dokumentasi hasil karya otentik Ahmad dalam pembelajaran berbasis proyek (PjBL)
+                    Dokumentasi hasil karya otentik {activeMurid?.name || 'ananda'} yang dicatat wali kelas
                   </p>
                 </div>
-                <button
-                  onClick={() => showToast('Membuka formulir unggah dokumentasi karya mandiri...')}
-                  className="rounded-xl border border-slate-200 px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-                >
-                  + Tambah Dokumentasi
-                </button>
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -567,9 +567,9 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                           rppUrl: res.url || '',
                           rppStatus: 'BELUM_DIPERIKSA'
                         });
-                        triggerToast(res.message || '✓ Berkas RPP/Modul Ajar PDF berhasil diunggah!');
+                        triggerToast('✓ Berkas RPP/Modul Ajar PDF berhasil diunggah!');
                       } else {
-                        triggerToast('❌ Gagal mengunggah berkas.');
+                        triggerToast(res.message || '❌ Gagal mengunggah berkas.');
                       }
                     }
                   }}
@@ -1291,7 +1291,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                   </p>
                 </div>
                 <button
-                  onClick={() => alert('Mengunduh Berita Acara & Rapor Supervisi PDF...')}
+                  onClick={() => onNavigate('teacher_report')}
                   className="rounded-xl bg-teal-800 text-white font-bold text-xs py-2.5 px-5 hover:bg-teal-900 transition shadow-sm inline-flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>

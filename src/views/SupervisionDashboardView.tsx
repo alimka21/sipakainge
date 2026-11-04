@@ -150,11 +150,14 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </button>
           <button
             type="button"
-            onClick={() => triggerToast(`Riwayat catatan telaah untuk ${t.name} ditampilkan`)}
+            onClick={() => {
+              if (!sess?.rppFileName) triggerToast(`${t.name} belum mengunggah RPP.`);
+              else if (!openRppInNewTab(sess.rppUrl, sess.rppFileName)) triggerToast(RPP_UNAVAILABLE_MESSAGE);
+            }}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
-            title="Riwayat Catatan"
+            title="Lihat RPP (tab baru)"
           >
-            <span className="material-symbols-outlined text-base">history_edu</span>
+            <span className="material-symbols-outlined text-base">open_in_new</span>
           </button>
         </>
       );
@@ -203,9 +206,12 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
           </button>
           <button
             type="button"
-            onClick={() => triggerToast(`Mencetak lembar berita acara supervisi untuk ${t.name}...`)}
+            onClick={() => {
+              onSelectTeacherForObservation(t.id);
+              onNavigate('teacher_report');
+            }}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
-            title="Cetak Berita Acara"
+            title="Laporan & Cetak PDF"
           >
             <span className="material-symbols-outlined text-base">print</span>
           </button>
@@ -225,14 +231,6 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
             className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-all"
           >
             Lihat Rapor
-          </button>
-          <button
-            type="button"
-            onClick={() => triggerToast(`Berita acara resmi ${t.name} terverifikasi dinas`)}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
-            title="Verifikasi Resmi"
-          >
-            <span className="material-symbols-outlined text-base text-[#006947]">verified</span>
           </button>
         </>
       );
@@ -665,9 +663,13 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
                   </button>
                   <button
                     type="button"
-                    onClick={() => triggerToast(`Membuka berkas dokumen administrasi ${act.teacher.name}`)}
+                    onClick={() => {
+                      const sess = sessionStates?.[act.teacher.id];
+                      if (!sess?.rppFileName) triggerToast(`${act.teacher.name} belum mengunggah RPP.`);
+                      else if (!openRppInNewTab(sess.rppUrl, sess.rppFileName)) triggerToast(RPP_UNAVAILABLE_MESSAGE);
+                    }}
                     className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors border border-slate-200/60"
-                    title="Lihat Berkas"
+                    title="Lihat RPP (tab baru)"
                   >
                     <span className="material-symbols-outlined text-base">description</span>
                   </button>
@@ -991,15 +993,6 @@ export const SupervisionDashboardView: React.FC<SupervisionDashboardViewProps> =
               />
             </div>
 
-            {/* Export Report */}
-            <button
-              type="button"
-              onClick={() => triggerToast('Ekspor Rekap Supervisi Excel berhasil diunduh.')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#eff4ff] hover:bg-[#dce9ff] text-slate-800 text-xs font-semibold transition-colors"
-            >
-              <span className="material-symbols-outlined text-base text-[#00685f]">download</span>
-              <span>Rekap Excel</span>
-            </button>
           </div>
         </div>
 

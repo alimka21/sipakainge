@@ -154,10 +154,6 @@ export interface HabitItem {
   category: string;
   description: string;
   icon: string;
-  status: 'Konsisten' | 'Sangat Konsisten' | 'Perlu Didorong' | 'Sangat Baik' | 'Pendampingan';
-  statusColor: 'tertiary' | 'secondary' | 'primary';
-  targetNote: string;
-  complianceRate: number;
   timeValue?: string;
   subPrayers?: PrayerTimesChecklist;
 }
