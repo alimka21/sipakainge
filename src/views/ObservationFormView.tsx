@@ -3,7 +3,7 @@ import { ScreenId, UserRole, SupervisionSession, TeacherRecord } from '../types'
 import { APP_ASSETS, INITIAL_TEACHERS, PRINCIPAL_NAME } from '../data/mockData';
 import { uploadRPPDocument } from '../lib/supabase';
 import RppFileActions from '../components/RppFileActions';
-import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs } from '../lib/supervisionStateMachine';
+import { canTransition, describeBlockedTransition, canStartReflection, describeMissingReflectionPrereqs, canUploadRpp, statusAfterRppUpload } from '../lib/supervisionStateMachine';
 import { getAcademicPeriod } from '../lib/time';
 
 interface ObservationFormViewProps {
@@ -556,18 +556,24 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                   onChange={async (e) => {
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
+                      e.target.value = '';
+                      if (!canUploadRpp(activeSession.status)) {
+                        triggerToast(`RPP hanya bisa diunggah/diganti sejak jadwal disetujui sampai sebelum observasi (status sekarang: ${activeSession.status}).`);
+                        return;
+                      }
+                      const replacing = !!activeSession.rppFileName;
                       triggerToast('Sedang memproses & mengunggah dokumen...');
-                      const res = await uploadRPPDocument(file);
+                      const res = await uploadRPPDocument(file, selectedTeacherId);
                       if (res.success) {
                         updateSession({
-                          status: 'DOKUMEN_DIUPLOAD',
+                          status: statusAfterRppUpload(activeSession.status),
                           rppFileName: res.name,
                           rppFileSize: res.size,
                           rppUploadDate: res.date,
                           rppUrl: res.url || '',
                           rppStatus: 'BELUM_DIPERIKSA'
                         });
-                        triggerToast('✓ Berkas RPP/Modul Ajar PDF berhasil diunggah!');
+                        triggerToast(replacing ? '✓ RPP lama telah diganti dengan berkas baru.' : '✓ Berkas RPP/Modul Ajar PDF berhasil diunggah!');
                       } else {
                         triggerToast(res.message || '❌ Gagal mengunggah berkas.');
                       }
@@ -582,7 +588,7 @@ export const ObservationFormView: React.FC<ObservationFormViewProps> = ({
                   }}
                   className="rounded-xl border border-teal-800 text-teal-800 bg-white font-bold text-xs py-2.5 px-4 hover:bg-teal-50 transition shadow-xs"
                 >
-                  Pilih File Dari Komputer (Mendukung PDF)
+                  {activeSession.rppFileName ? 'Ganti Berkas RPP (menimpa yang lama)' : 'Pilih File Dari Komputer (Mendukung PDF)'}
                 </button>
               </div>
 

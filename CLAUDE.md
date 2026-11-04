@@ -412,6 +412,25 @@ option). Now `ObservationFormView` keys the session by an id that exists in
 `useState` initial id could be `''` if the list hadn't loaded). Lost
 in-memory sessions from before the fix are not recoverable.
 
+## RPP re-upload overwrites (since 2026-11-04)
+- Guru (and KS on the guru's behalf) may upload/replace the RPP while
+  `canUploadRpp(status)` (`RPP_UPLOAD_STATUSES` in
+  `supervisionStateMachine.ts`: DISETUJUI, TERJADWAL, DOKUMEN_DIUPLOAD,
+  PERANGKAT_DINILAI). Locked from OBSERVASI_DILAKUKAN on.
+- `statusAfterRppUpload`: only DISETUJUI/TERJADWAL advance to
+  DOKUMEN_DIUPLOAD; later stages keep their status (the old hardcoded
+  `status: 'DOKUMEN_DIUPLOAD'` was rejected by the state machine from
+  PERANGKAT_DINILAI, so the whole upload was silently dropped). Every upload
+  resets `rppStatus` to BELUM_DIPERIKSA.
+- `uploadRPPDocument(file, teacherId)` writes ONE object per guru per semester
+  (`<teacherId>/<Ganjil_2026_2027>.<ext>`, `upsert: true`) so a re-upload
+  replaces the old file; stored URL has `?v=<ts>` for cache-busting. Other-ext
+  leftovers are removed best-effort — needs policy `rpp_bucket_hapus`
+  (DELETE) from the current `supabase-schema.sql`. Files uploaded before this
+  change (`rpp_<ts>_<name>`) stay in the bucket.
+- Guru UI: "Hapus Berkas" (cleared fields, then upload stayed locked) replaced
+  by "Ganti Berkas".
+
 ## Supervision scores wiped by another device (fixed 2026-11-04)
 User report: M. Ilham Ramadhan was scored + observed, next day data gone. Live
 row (`teacher_id t-import-1790561358362-9`) existed, status `SELESAI`, reflections

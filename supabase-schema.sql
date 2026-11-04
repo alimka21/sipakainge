@@ -509,7 +509,8 @@ $$;
 
 -- ==============================================================================
 -- 16. STORAGE: bucket dokumen RPP / Modul Ajar
---     Dipakai uploadRPPDocument() di src/lib/supabase.ts (upload dengan upsert).
+--     Dipakai uploadRPPDocument() di src/lib/supabase.ts: satu berkas per guru per
+--     semester, unggah ulang menimpa (upsert).
 -- ==============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('rpp_bucket', 'rpp_bucket', true)
@@ -518,6 +519,7 @@ ON CONFLICT (id) DO NOTHING;
 DROP POLICY IF EXISTS "rpp_bucket_baca" ON storage.objects;
 DROP POLICY IF EXISTS "rpp_bucket_unggah" ON storage.objects;
 DROP POLICY IF EXISTS "rpp_bucket_ubah" ON storage.objects;
+DROP POLICY IF EXISTS "rpp_bucket_hapus" ON storage.objects;
 
 CREATE POLICY "rpp_bucket_baca" ON storage.objects
     FOR SELECT TO anon, authenticated USING (bucket_id = 'rpp_bucket');
@@ -525,5 +527,8 @@ CREATE POLICY "rpp_bucket_unggah" ON storage.objects
     FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = 'rpp_bucket');
 CREATE POLICY "rpp_bucket_ubah" ON storage.objects
     FOR UPDATE TO anon, authenticated USING (bucket_id = 'rpp_bucket') WITH CHECK (bucket_id = 'rpp_bucket');
+-- Unggah ulang RPP dengan ekstensi berbeda menghapus berkas lama guru tsb.
+CREATE POLICY "rpp_bucket_hapus" ON storage.objects
+    FOR DELETE TO anon, authenticated USING (bucket_id = 'rpp_bucket');
 
 -- Selesai.

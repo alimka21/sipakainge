@@ -113,3 +113,13 @@ export const STATUS_STAGE: Record<SupervisionStatus, SupervisionStage> = {
   TINDAK_LANJUT: 'refleksi',
   SELESAI: 'tuntas',
 };
+
+/**
+ * Guru (atau KS atas nama guru) boleh mengunggah / mengganti RPP sejak jadwal
+ * disetujui sampai observasi kelas dilakukan. Berkas baru menimpa yang lama.
+ */
+export const RPP_UPLOAD_STATUSES: SupervisionStatus[] = ['DISETUJUI', 'TERJADWAL', 'DOKUMEN_DIUPLOAD', 'PERANGKAT_DINILAI'];
+export const canUploadRpp = (status: SupervisionStatus) => RPP_UPLOAD_STATUSES.includes(status);
+/** Status setelah RPP diunggah: maju ke DOKUMEN_DIUPLOAD hanya dari tahap jadwal; selain itu tetap. */
+export const statusAfterRppUpload = (status: SupervisionStatus): SupervisionStatus =>
+  status === 'DISETUJUI' || status === 'TERJADWAL' ? 'DOKUMEN_DIUPLOAD' : status;

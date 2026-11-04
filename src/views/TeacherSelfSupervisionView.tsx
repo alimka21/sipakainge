@@ -5,7 +5,7 @@ import { OBSERVASI_MENDALAM_ITEMS } from './ObservationFormView';
 import { newRecordId, uploadRPPDocument } from '../lib/supabase';
 import RppFileActions from '../components/RppFileActions';
 import { formatWitaDate, getAcademicPeriod } from '../lib/time';
-import { canTransition, describeBlockedTransition } from '../lib/supervisionStateMachine';
+import { canTransition, describeBlockedTransition, canUploadRpp, statusAfterRppUpload } from '../lib/supervisionStateMachine';
 
 interface TeacherSelfSupervisionViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -327,8 +327,14 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
   const handleUploadRPP = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      e.target.value = '';
+      if (!canUploadRpp(activeSession.status)) {
+        showToast(`RPP hanya bisa diunggah/diganti sejak jadwal disetujui sampai sebelum observasi (status sekarang: ${activeSession.status}).`);
+        return;
+      }
+      const replacing = !!activeSession.rppFileName;
       showToast('Sedang memproses & mengunggah dokumen...');
-      const res = await uploadRPPDocument(file);
+      const res = await uploadRPPDocument(file, selectedTeacherId);
       if (res.success) {
         updateSession({
           rppFileName: res.name,
@@ -336,9 +342,13 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
           rppUploadDate: res.date,
           rppUrl: res.url || '',
           rppStatus: 'BELUM_DIPERIKSA',
-          status: 'DOKUMEN_DIUPLOAD'
+          status: statusAfterRppUpload(activeSession.status),
         });
-        showToast('✓ Modul ajar/RPP berhasil diunggah! Berkas dalam antrean telaah.');
+        showToast(
+          replacing
+            ? '✓ RPP lama telah diganti. Status pemeriksaan kembali "Belum Diperiksa".'
+            : '✓ Modul ajar/RPP berhasil diunggah! Berkas dalam antrean telaah.'
+        );
       } else {
         showToast(res.message || '❌ Gagal mengunggah berkas.');
       }
@@ -913,7 +923,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                   type="file"
                   accept=".pdf,.doc,.docx"
                   onChange={handleUploadRPP}
-                  disabled={!['DISETUJUI', 'TERJADWAL'].includes(activeSession.status)}
+                  disabled={!canUploadRpp(activeSession.status)}
                   className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                 />
                 <div className="space-y-3">
@@ -922,7 +932,7 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                     <p className="font-extrabold text-slate-800">Klik atau seret file PDF / DOCX RPP di sini</p>
                     <p className="text-slate-400 mt-1">Maksimum ukuran file: 10 MB</p>
                   </div>
-                  {!['DISETUJUI', 'TERJADWAL'].includes(activeSession.status) && (
+                  {!canUploadRpp(activeSession.status) && (
                     <p className="text-[10px] text-red-600 font-bold bg-red-50 p-2 rounded-lg max-w-sm mx-auto">
                       ⚠ Tombol upload akan terbuka setelah jadwal disetujui / terjadwal oleh Kepala Sekolah!
                     </p>
@@ -943,15 +953,20 @@ export const TeacherSelfSupervisionView: React.FC<TeacherSelfSupervisionViewProp
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      updateSession({ rppFileName: '', rppFileSize: '', rppUploadDate: '', rppUrl: '', rppStatus: 'BELUM_DIPERIKSA' });
-                    }}
-                    disabled={!['DOKUMEN_DIUPLOAD', 'DISETUJUI', 'TERJADWAL'].includes(activeSession.status)}
-                    className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-lg text-xs font-bold transition disabled:opacity-30"
-                  >
-                    Hapus Berkas
-                  </button>
+                  {canUploadRpp(activeSession.status) ? (
+                    <label
+                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-teal-800 text-teal-800 bg-white hover:bg-teal-50 text-xs font-bold cursor-pointer transition"
+                      title="Unggah berkas baru; berkas lama akan tertimpa"
+                    >
+                      <span className="material-symbols-outlined text-sm">upload_file</span>
+                      <span>Ganti Berkas</span>
+                      <input type="file" accept=".pdf,.doc,.docx" onChange={handleUploadRPP} className="hidden" />
+                    </label>
+                  ) : (
+                    <span className="shrink-0 text-[10px] font-bold text-slate-400 max-w-[140px] text-right">
+                      Berkas terkunci setelah observasi kelas
+                    </span>
+                  )}
                 </div>
 
                 <div className="pt-3 border-t border-teal-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

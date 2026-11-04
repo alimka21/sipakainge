@@ -501,11 +501,14 @@ export function resolveRppFileUrl(rppUrl?: string): string {
 
 /**
  * Mengunggah dokumen RPP/Modul Ajar ke Supabase Storage (`rpp_bucket`).
+ * Satu berkas per guru per semester (`<teacherId>/<semester>.<ext>`): unggah
+ * ulang MENIMPA berkas lama, bukan menambah berkas baru. URL diberi `?v=` agar
+ * browser/CDN tidak menampilkan versi lama.
  * Gagal (success: false) bila Storage belum diatur atau unggahan ditolak —
  * jangan pernah melaporkan "berhasil" untuk berkas yang tidak tersimpan,
  * karena Kepala Sekolah lalu melihat nama berkas tanpa isi.
  */
-export async function uploadRPPDocument(file: File): Promise<{
+export async function uploadRPPDocument(file: File, teacherId: string): Promise<{
   success: boolean;
   url?: string;
   name: string;
@@ -520,17 +523,25 @@ export async function uploadRPPDocument(file: File): Promise<{
   if (!isSupabaseConfigured() || !supabase) {
     return { ...base, success: false, message: '❌ Berkas tidak terunggah: koneksi database/Storage belum diatur.' };
   }
+  const ext = (file.name.match(/\.(pdf|docx?)$/i)?.[1] || 'pdf').toLowerCase();
+  const folder = `${teacherId}/${currentSupervisionSemester().replace(/[^A-Za-z0-9]+/g, '_')}`;
+  const path = `${folder}.${ext}`;
   try {
-    const fileName = `rpp_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
     const { error } = await supabase.storage
       .from('rpp_bucket')
-      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+      .upload(path, file, { cacheControl: '60', upsert: true, contentType: file.type || undefined });
     if (error) {
       console.warn('Storage upload error:', error);
       return { ...base, success: false, message: `❌ Berkas tidak terunggah: ${error.message}` };
     }
-    const { data: publicUrlData } = supabase.storage.from('rpp_bucket').getPublicUrl(fileName);
-    return { ...base, success: true, url: publicUrlData.publicUrl };
+    // Berkas lama dengan ekstensi lain (mis. dulu .docx, sekarang .pdf). Butuh
+    // policy DELETE rpp_bucket_hapus; kalau belum ada, berkas lama hanya tertinggal.
+    const stale = ['pdf', 'doc', 'docx'].filter((e) => e !== ext).map((e) => `${folder}.${e}`);
+    supabase.storage.from('rpp_bucket').remove(stale).then(({ error: rmError }) => {
+      if (rmError) console.warn('Hapus RPP lama gagal:', rmError.message);
+    });
+    const { data: publicUrlData } = supabase.storage.from('rpp_bucket').getPublicUrl(path);
+    return { ...base, success: true, url: `${publicUrlData.publicUrl}?v=${Date.now()}` };
   } catch (err: any) {
     return { ...base, success: false, message: `❌ Berkas tidak terunggah: ${err?.message || 'koneksi gagal'}` };
   }
